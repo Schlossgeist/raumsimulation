@@ -44,7 +44,9 @@ jobs:
 
     - name: Build
       # Build your program with the given configuration
-      run: cmake --build ${{github.workspace}}/build --config ${{env.BUILD_TYPE}}
+      run: |
+          cmake --build ${{github.workspace}}/build --config ${{env.BUILD_TYPE}}
+          ls -la ${{github.workspace}}/build
 
     - name: Test
       working-directory: ${{github.workspace}}/build
@@ -56,5 +58,5 @@ jobs:
       uses: actions/upload-artifact@v3
       with:
         name: raumsimulation
-        path: ${{github.workspace}}/build/Raumsimulation_artefacts
+        path: ${{github.workspace}}/build
 
