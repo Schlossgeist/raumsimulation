@@ -15,7 +15,7 @@ jobs:
     # The CMake configure and build commands are platform agnostic and should work equally well on Windows or Mac.
     # You can convert this to a matrix build if you need cross-platform coverage.
     # See: https://docs.github.com/en/free-pro-team@latest/actions/learn-github-actions/managing-complex-workflows#using-a-build-matrix
-    runs-on: ubuntu-latest
+    runs-on: windows-2022
 
     steps:
     - uses: actions/checkout@v3
@@ -27,16 +27,6 @@ jobs:
         path: JUCE
         ref: 7.0.5
 
-    - name: Get Dependecies
-      run: |
-          sudo apt install libasound2-dev libjack-jackd2-dev \
-                           ladspa-sdk \
-                           libcurl4-openssl-dev  \
-                           libfreetype6-dev \
-                           libx11-dev libxcomposite-dev libxcursor-dev libxcursor-dev libxext-dev libxinerama-dev libxrandr-dev libxrender-dev \
-                           libwebkit2gtk-4.0-dev \
-                           libglu1-mesa-dev mesa-common-dev
-
     - name: Configure CMake
       # Configure CMake in a 'build' subdirectory. `CMAKE_BUILD_TYPE` is only required if you are using a single-configuration generator such as make.
       # See https://cmake.org/cmake/help/latest/variable/CMAKE_BUILD_TYPE.html?highlight=cmake_build_type
@@ -46,7 +36,6 @@ jobs:
       # Build your program with the given configuration
       run: |
           cmake --build ${{github.workspace}}/build --config ${{env.BUILD_TYPE}}
-          ls -la ${{github.workspace}}/build
 
     - name: Test
       working-directory: ${{github.workspace}}/build
@@ -58,5 +47,5 @@ jobs:
       uses: actions/upload-artifact@v3
       with:
         name: raumsimulation
-        path: ${{github.workspace}}/build
+        path: ${{github.workspace}}/build/Raumsimulation_artefacts/Release
 
