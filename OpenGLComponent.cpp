@@ -146,7 +146,7 @@ Matrix3D<float> OpenGLComponent::getViewMatrix() const
     const ScopedLock lock(mutex);
 
     auto viewMatrix = Matrix3D<float>::fromTranslation({ 0.0f, 1.0f, -10.0f }) * draggableOrientation.getRotationMatrix();
-    auto rotationMatrix = Matrix3D<float>::rotation({ rotation, rotation, -0.3f });
+    auto rotationMatrix = Matrix3D<float>::rotation({ 0, rotation, 0 });
 
     return viewMatrix * rotationMatrix;
 }

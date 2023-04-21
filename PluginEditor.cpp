@@ -38,11 +38,8 @@ void RaumsimulationAudioProcessorEditor::paint (juce::Graphics& g)
 
 void RaumsimulationAudioProcessorEditor::resized()
 {
-    // This is generally where you'll want to lay out the positions of any
-    // subcomponents in your editor..
-
     auto height = getHeight();
     auto width = getWidth();
 
-    openGLComponent.setBounds(0, 0, width*0.5, height*0.5);
+    openGLComponent.setBounds(0, 0, width/2, height/2);
 }

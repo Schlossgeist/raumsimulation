@@ -1,13 +1,3 @@
-/*
-  ==============================================================================
-
-    OpenGLComponent.h
-    Created: 18 Apr 2023 9:41:30pm
-    Author:  Nick
-
-  ==============================================================================
-*/
-
 #pragma once
 
 #include <JuceHeader.h>
@@ -129,6 +119,13 @@ struct OpenGLUtils
                 dir = dir.getParentDirectory();
 
             if (shapeFile.load(dir.getChildFile("Resources").getChildFile("raum001.obj")).wasOk())
+                for (auto* s : shapeFile.shapes)
+                    vertexBuffers.add(new VertexBuffer(*s));
+        }
+
+        explicit Shape(const File& fileToLoad)
+        {
+            if (shapeFile.load(fileToLoad).wasOk())
                 for (auto* s : shapeFile.shapes)
                     vertexBuffers.add(new VertexBuffer(*s));
         }
@@ -632,6 +629,13 @@ private:
             addAndMakeVisible(presetLabel);
             presetLabel.attachToComponent(&presetBox, true);
 
+            addAndMakeVisible(objFileLoadButton);
+            objFileLoadButton.setColour(TextButton::buttonColourId, Colour (0xff797fed));
+            objFileLoadButton.setColour(TextButton::textColourOffId, Colours::black);
+            objFileLoadButton.onClick = [this] { openFile(); };
+
+            objFileLabel.attachToComponent(&objFileLoadButton, false);
+
             lookAndFeelChanged();
         }
 
@@ -644,7 +648,7 @@ private:
 
         void resized() override
         {
-            auto area = getLocalBounds().reduced(4);
+            auto area = getLocalBounds().reduced(5);
 
             auto top = area.removeFromTop(75);
 
@@ -655,14 +659,10 @@ private:
             top.removeFromRight(70);
             statusLabel.setBounds(top);
 
-            auto shaderArea = area.removeFromBottom(75);
-
-            auto presets = shaderArea.removeFromTop(25);
-            presets.removeFromLeft(100);
-            presetBox.setBounds(presets.removeFromLeft(150));
-            presets.removeFromLeft(100);
-
-            shaderArea.removeFromTop(4);
+            auto bottom = area.removeFromBottom(25);
+            presetBox.setBounds(bottom.removeFromLeft(bottom.getWidth() / 3));
+            bottom.removeFromLeft(5);       // little space between combo box and file chooser button
+            objFileLoadButton.setBounds(bottom.removeFromRight(bottom.getWidth()));
         }
 
         bool isMouseButtonDownThreadsafe() const { return buttonDown; }
@@ -756,6 +756,33 @@ private:
 
         std::atomic<bool> buttonDown{ false };
 
+        void openFile()
+        {
+            if (objFileChooser != nullptr)
+                return;
+
+            objFileChooser.reset(new FileChooser ("Select an obj file...", File(), "*.obj"));
+
+            objFileChooser->launchAsync(FileBrowserComponent::openMode | FileBrowserComponent::canSelectFiles,
+                    [this] (const FileChooser& fc) mutable
+                    {
+                        if (fc.getURLResults().size() > 0)
+                        {
+                            auto result = fc.getURLResult();
+                            openGLComponent.objFileURL = result;
+                            objFileLabel.setText(result.toString(false), sendNotificationAsync);
+
+                            startTimer(10);
+                        }
+
+                        objFileChooser = nullptr;
+                    }, nullptr);
+        }
+
+        Label objFileLabel;
+        TextButton objFileLoadButton = { "Load OBJ File..." , "Choose a file that contains the 3D model for the room you want to simulate"};
+        std::unique_ptr<juce::FileChooser> objFileChooser;
+
         JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(ControlsOverlay)
     };
 
@@ -763,6 +790,7 @@ private:
 
     float rotation = 0.0f;
 
+    juce::URL objFileURL = {};
     std::unique_ptr<OpenGLShaderProgram> shader;
     std::unique_ptr<OpenGLUtils::Shape> shape;
     std::unique_ptr<OpenGLUtils::Attributes> attributes;
@@ -790,7 +818,16 @@ private:
                 shader.reset(newShader.release());
                 shader->use();
 
-                shape.reset(new OpenGLUtils::Shape());
+
+                if (objFileURL.isEmpty())
+                {
+                    shape.reset(new OpenGLUtils::Shape());
+                }
+                else
+                {
+                    shape.reset(new OpenGLUtils::Shape(objFileURL.getLocalFile()));
+                }
+
                 attributes.reset(new OpenGLUtils::Attributes(*shader));
                 uniforms.reset(new OpenGLUtils::Uniforms(*shader));
 

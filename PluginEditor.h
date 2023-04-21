@@ -11,6 +11,7 @@
 #include <JuceHeader.h>
 #include "PluginProcessor.h"
 #include "OpenGLComponent.h"
+#include "ImpulseResponseComponent.h"
 
 //==============================================================================
 /**
@@ -31,6 +32,7 @@ private:
     RaumsimulationAudioProcessor& audioProcessor;
 
     OpenGLComponent openGLComponent;
+    ImpulseResponseComponent impulseResponseComponent;
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (RaumsimulationAudioProcessorEditor)
 };

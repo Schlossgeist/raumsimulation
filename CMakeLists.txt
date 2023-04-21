@@ -14,7 +14,7 @@ cmake_minimum_required(VERSION 3.15)
 # `project()` command. `project()` sets up some helpful variables that describe source/binary
 # directories, and the current project version. This is a standard CMake command.
 
-project(RAUMSIMULATION VERSION 0.0.1)
+project(Raumsimulation VERSION 0.0.1)
 
 # If you've installed JUCE somehow (via a package manager, or directly using the CMake install
 # target), you'll need to tell this project that it depends on the installed copy of JUCE. If you've
@@ -41,7 +41,7 @@ juce_add_plugin(Raumsimulation
       VERSION 0.0.1                             # Set this if the plugin version is different to the project version
     # ICON_BIG ...                              # ICON_* arguments specify a path to an image file to use as an icon for the Standalone
     # ICON_SMALL ...
-      COMPANY_NAME TU Dresden                   # Specify the name of the plugin's author
+      COMPANY_NAME TU\ Dresden                  # Specify the name of the plugin's author
       IS_SYNTH FALSE                            # Is this a synth or an effect?
       NEEDS_MIDI_INPUT FALSE                    # Does the plugin need midi input?
       NEEDS_MIDI_OUTPUT FALSE                   # Does the plugin need midi output?
@@ -69,6 +69,8 @@ juce_add_plugin(Raumsimulation
 
 target_sources(Raumsimulation
     PRIVATE
+        ImpulseResponseComponent.cpp
+        ImpulseResponseComponent.h
         OpenGLComponent.cpp
         OpenGLComponent.h
         PluginEditor.cpp
