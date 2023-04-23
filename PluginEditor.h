@@ -19,7 +19,7 @@
 class RaumsimulationAudioProcessorEditor  : public juce::AudioProcessorEditor
 {
 public:
-    RaumsimulationAudioProcessorEditor (RaumsimulationAudioProcessor&);
+    RaumsimulationAudioProcessorEditor(RaumsimulationAudioProcessor&, juce::AudioProcessorValueTreeState&);
     ~RaumsimulationAudioProcessorEditor() override;
 
     //==============================================================================
@@ -30,6 +30,12 @@ private:
     // This reference is provided as a quick way for your editor to
     // access the processor object that created it.
     RaumsimulationAudioProcessor& audioProcessor;
+
+    juce::AudioProcessorValueTreeState& parameterTreeState;
+
+    juce::Label gainLabel{{}, "Gain"};
+    juce::Slider gainSlider;
+    std::unique_ptr<juce::AudioProcessorValueTreeState::SliderAttachment> gainAttachment;
 
     OpenGLComponent openGLComponent;
     ImpulseResponseComponent impulseResponseComponent;

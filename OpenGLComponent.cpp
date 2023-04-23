@@ -31,10 +31,9 @@
 #include "OpenGLComponent.h"
 
 //==============================================================================
-OpenGLComponent::OpenGLComponent()
+OpenGLComponent::OpenGLComponent(juce::AudioProcessorValueTreeState& pts) : parameters(pts)
 {
-    // In your constructor, you should add any child components, and
-    // initialise any special settings that your component needs.
+    objFileURL = static_cast<const juce::URL>(parameters.state.getProperty("obj_file_url"));
 
     setOpaque(true);
     controlsOverlay.reset(new ControlsOverlay(*this));

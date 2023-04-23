@@ -61,4 +61,20 @@ private:
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(RaumsimulationAudioProcessor)
 
     juce::Random randomGenerator;
+
+    juce::ValueTree settings
+            { "SettingsGroups", {},
+             {
+                     { "SettingsGroup", {{ "name", "Graphics Settings" }},
+                      {
+                              { "Setting", {{ "id", "zoom" },               { "value", 0.5 }}},
+                              { "Setting", {{ "id", "rotation_speed" },     { "value", 0.5 }}},
+                              { "Setting", {{ "id", "obj_file_url" },     { "value", "" }}}
+                      }
+                     }
+             }
+            };
+    juce::AudioProcessorValueTreeState parameters;
+
+    std::atomic<float>* gainParameter = nullptr;
 };

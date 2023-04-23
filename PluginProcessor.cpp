@@ -20,8 +20,14 @@ RaumsimulationAudioProcessor::RaumsimulationAudioProcessor()
                        .withOutput ("Output", juce::AudioChannelSet::stereo(), true)
                      #endif
                        )
+     , parameters(*this, nullptr, juce::Identifier("Parameters"),
+                 {
+                         std::make_unique<juce::AudioParameterFloat>("gain", "Gain", 0.0f, 1.0f, 0.5f)
+                 })
 #endif
 {
+    parameters.state.appendChild(settings, nullptr);
+    gainParameter = parameters.getRawParameterValue("gain");
 }
 
 RaumsimulationAudioProcessor::~RaumsimulationAudioProcessor()
@@ -159,6 +165,8 @@ void RaumsimulationAudioProcessor::processBlock (juce::AudioBuffer<float>& buffe
             channelData[sample] = (randomGenerator.nextFloat() - 0.5f) * 0.1f;
         }
     }
+
+    buffer.applyGain(*gainParameter);
 }
 
 //==============================================================================
@@ -169,21 +177,25 @@ bool RaumsimulationAudioProcessor::hasEditor() const
 
 juce::AudioProcessorEditor* RaumsimulationAudioProcessor::createEditor()
 {
-    return new RaumsimulationAudioProcessorEditor (*this);
+    return new RaumsimulationAudioProcessorEditor (*this, parameters);
 }
 
 //==============================================================================
 void RaumsimulationAudioProcessor::getStateInformation (juce::MemoryBlock& destData)
 {
-    // You should use this method to store your parameters in the memory block.
-    // You could do that either as raw data, or use the XML or ValueTree classes
-    // as intermediaries to make it easy to save and load complex data.
+    auto state = parameters.copyState();
+    std::unique_ptr<juce::XmlElement> xml = state.createXml();
+    copyXmlToBinary(*xml, destData);
 }
 
 void RaumsimulationAudioProcessor::setStateInformation (const void* data, int sizeInBytes)
 {
-    // You should use this method to restore your parameters from this memory block,
-    // whose contents will have been created by the getStateInformation() call.
+    std::unique_ptr<juce::XmlElement> xmlState = getXmlFromBinary(data, sizeInBytes);
+
+    if (xmlState != nullptr)
+        if (xmlState->hasTagName(parameters.state.getType())) {
+            parameters.replaceState(juce::ValueTree::fromXml (*xmlState));
+        }
 }
 
 //==============================================================================

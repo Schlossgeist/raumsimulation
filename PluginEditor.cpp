@@ -10,8 +10,8 @@
 #include "PluginEditor.h"
 
 //==============================================================================
-RaumsimulationAudioProcessorEditor::RaumsimulationAudioProcessorEditor (RaumsimulationAudioProcessor& p)
-    : AudioProcessorEditor (&p), audioProcessor (p)
+RaumsimulationAudioProcessorEditor::RaumsimulationAudioProcessorEditor(RaumsimulationAudioProcessor& p, juce::AudioProcessorValueTreeState& pts)
+    : AudioProcessorEditor(&p), openGLComponent(pts), audioProcessor(p), parameterTreeState(pts)
 {
     // Make sure that before the constructor has finished, you've set the
     // editor's size to whatever you need it to be.
@@ -19,6 +19,12 @@ RaumsimulationAudioProcessorEditor::RaumsimulationAudioProcessorEditor (Raumsimu
 
     addAndMakeVisible(openGLComponent);
     setResizable(true, false);
+
+    addAndMakeVisible(gainSlider);
+    gainSlider.setTextBoxStyle(juce::Slider::TextBoxBelow, false, gainSlider.getTextBoxWidth(), gainSlider.getTextBoxHeight());
+    gainSlider.setSliderStyle(juce::Slider::RotaryVerticalDrag);
+    gainLabel.attachToComponent(&gainSlider, false);
+    gainAttachment.reset(new juce::AudioProcessorValueTreeState::SliderAttachment (parameterTreeState, "gain", gainSlider));
 }
 
 RaumsimulationAudioProcessorEditor::~RaumsimulationAudioProcessorEditor()
@@ -42,4 +48,5 @@ void RaumsimulationAudioProcessorEditor::resized()
     auto width = getWidth();
 
     openGLComponent.setBounds(0, 0, width/2, height/2);
+    gainSlider.setBounds(width - 75, height - 75, 75, 75);
 }

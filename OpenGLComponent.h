@@ -549,7 +549,7 @@ class OpenGLComponent: public juce::Component,
                        private juce::AsyncUpdater
 {
 public:
-    OpenGLComponent();
+    OpenGLComponent(juce::AudioProcessorValueTreeState&);
     ~OpenGLComponent() override;
 
     void paint (juce::Graphics&) override;
@@ -581,6 +581,8 @@ private:
     }
 
     juce::OpenGLContext openGLContext;
+
+    juce::AudioProcessorValueTreeState& parameters;
 
     //==============================================================================
     /**
@@ -635,6 +637,7 @@ private:
             objFileLoadButton.onClick = [this] { openFile(); };
 
             objFileLabel.attachToComponent(&objFileLoadButton, false);
+            objFileLabel.setText(openGLComponent.objFileURL.toString(false), sendNotificationAsync);
 
             lookAndFeelChanged();
         }
@@ -770,6 +773,7 @@ private:
                         {
                             auto result = fc.getURLResult();
                             openGLComponent.objFileURL = result;
+                            openGLComponent.parameters.state.setProperty("obj_file_url", result.toString(false), nullptr);
                             objFileLabel.setText(result.toString(false), sendNotificationAsync);
 
                             startTimer(10);
