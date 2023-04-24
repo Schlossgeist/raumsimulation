@@ -783,8 +783,8 @@ private:
                     }, nullptr);
         }
 
-        Label objFileLabel;
-        TextButton objFileLoadButton = { "Load OBJ File..." , "Choose a file that contains the 3D model for the room you want to simulate"};
+        Label objFileLabel = {{}, "No file selected"};
+        TextButton objFileLoadButton = {"Load OBJ File..." , "Choose a file that contains the 3D model for the room you want to simulate"};
         std::unique_ptr<juce::FileChooser> objFileChooser;
 
         JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(ControlsOverlay)

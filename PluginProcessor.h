@@ -71,6 +71,11 @@ private:
                               { "Setting", {{ "id", "rotation_speed" },     { "value", 0.5 }}},
                               { "Setting", {{ "id", "obj_file_url" },     { "value", "" }}}
                       }
+                     },
+                     { "SettingsGroup", {{ "name", "Room Settings" }},
+                      {
+                              { "Setting", {{ "id", "ir_file_url" },     { "value", "" }}}
+                      }
                      }
              }
             };

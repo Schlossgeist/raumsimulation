@@ -11,14 +11,19 @@
 
 //==============================================================================
 RaumsimulationAudioProcessorEditor::RaumsimulationAudioProcessorEditor(RaumsimulationAudioProcessor& p, juce::AudioProcessorValueTreeState& pts)
-    : AudioProcessorEditor(&p), openGLComponent(pts), audioProcessor(p), parameterTreeState(pts)
+    : AudioProcessorEditor(&p)
+    , openGLComponent(pts)
+    , impulseResponseComponent(pts)
+    , audioProcessor(p)
+    , parameterTreeState(pts)
 {
     // Make sure that before the constructor has finished, you've set the
     // editor's size to whatever you need it to be.
     setSize (1200, 900);
+    setResizable(true, false);
 
     addAndMakeVisible(openGLComponent);
-    setResizable(true, false);
+    addAndMakeVisible(impulseResponseComponent);
 
     addAndMakeVisible(gainSlider);
     gainSlider.setTextBoxStyle(juce::Slider::TextBoxBelow, false, gainSlider.getTextBoxWidth(), gainSlider.getTextBoxHeight());
@@ -34,12 +39,7 @@ RaumsimulationAudioProcessorEditor::~RaumsimulationAudioProcessorEditor()
 //==============================================================================
 void RaumsimulationAudioProcessorEditor::paint (juce::Graphics& g)
 {
-    // (Our component is opaque, so we must completely fill the background with a solid colour)
-    g.fillAll (getLookAndFeel().findColour (juce::ResizableWindow::backgroundColourId));
-
-    g.setColour (juce::Colours::white);
-    g.setFont (15.0f);
-    g.drawFittedText ("Hello World!", getLocalBounds(), juce::Justification::centred, 1);
+    g.fillAll(getLookAndFeel().findColour(juce::ResizableWindow::backgroundColourId));
 }
 
 void RaumsimulationAudioProcessorEditor::resized()
@@ -48,5 +48,6 @@ void RaumsimulationAudioProcessorEditor::resized()
     auto width = getWidth();
 
     openGLComponent.setBounds(0, 0, width/2, height/2);
+    impulseResponseComponent.setBounds(0, 5*height/6, width/2, height/6);
     gainSlider.setBounds(width - 75, height - 75, 75, 75);
 }
