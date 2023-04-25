@@ -83,24 +83,35 @@ int RaumsimulationAudioProcessor::getCurrentProgram()
     return 0;
 }
 
-void RaumsimulationAudioProcessor::setCurrentProgram (int index)
+void RaumsimulationAudioProcessor::setCurrentProgram(int index)
 {
 }
 
-const juce::String RaumsimulationAudioProcessor::getProgramName (int index)
+const juce::String RaumsimulationAudioProcessor::getProgramName(int index)
 {
     return {};
 }
 
-void RaumsimulationAudioProcessor::changeProgramName (int index, const juce::String& newName)
+void RaumsimulationAudioProcessor::changeProgramName(int index, const juce::String& newName)
 {
 }
 
 //==============================================================================
-void RaumsimulationAudioProcessor::prepareToPlay (double sampleRate, int samplesPerBlock)
+void RaumsimulationAudioProcessor::prepareToPlay(double sampleRate, int samplesPerBlock)
 {
-    // Use this method as the place to do any pre-playback
-    // initialisation that you need..
+    const auto channels = jmax(getTotalNumInputChannels(), getTotalNumOutputChannels());
+
+    if (channels == 0)
+        return;
+
+    juce::dsp::ProcessSpec processSpec{sampleRate, (uint32) samplesPerBlock, (uint32) channels};
+
+    auto const irFileURL = static_cast<const juce::URL>(parameters.state.getProperty("ir_file_url"));
+    convolution.loadImpulseResponse(irFileURL.getLocalFile(), juce::dsp::Convolution::Stereo::yes, juce::dsp::Convolution::Trim::no, 0);
+    convolution.prepare(processSpec);
+
+    gain.setGainLinear(*gainParameter);
+    gain.prepare(processSpec);
 }
 
 void RaumsimulationAudioProcessor::releaseResources()
@@ -110,7 +121,7 @@ void RaumsimulationAudioProcessor::releaseResources()
 }
 
 #ifndef JucePlugin_PreferredChannelConfigurations
-bool RaumsimulationAudioProcessor::isBusesLayoutSupported (const BusesLayout& layouts) const
+bool RaumsimulationAudioProcessor::isBusesLayoutSupported(const BusesLayout& layouts) const
 {
   #if JucePlugin_IsMidiEffect
     juce::ignoreUnused (layouts);
@@ -135,38 +146,22 @@ bool RaumsimulationAudioProcessor::isBusesLayoutSupported (const BusesLayout& la
 }
 #endif
 
-void RaumsimulationAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer, juce::MidiBuffer& midiMessages)
+void RaumsimulationAudioProcessor::processBlock(juce::AudioBuffer<float>& buffer, juce::MidiBuffer& midiMessages)
 {
-    juce::ScopedNoDenormals noDenormals;
-    auto totalNumInputChannels  = getTotalNumInputChannels();
-    auto totalNumOutputChannels = getTotalNumOutputChannels();
+    if (jmax (getTotalNumInputChannels(), getTotalNumOutputChannels()) == 0)
+        return;
 
-    // In case we have more outputs than inputs, this code clears any output
-    // channels that didn't contain input data, (because these aren't
-    // guaranteed to be empty - they may contain garbage).
-    // This is here to avoid people getting screaming feedback
-    // when they first compile a plugin, but obviously you don't need to keep
-    // this code if your algorithm always overwrites all the output channels.
-    for (auto i = totalNumInputChannels; i < totalNumOutputChannels; ++i)
-        buffer.clear (i, 0, buffer.getNumSamples());
+    ScopedNoDenormals noDenormals;
 
-    // This is the place where you'd normally do the guts of your plugin's
-    // audio processing...
-    // Make sure to reset the state if your inner loop is processing
-    // the samples and the outer loop is handling the channels.
-    // Alternatively, you can process the samples with the channels
-    // interleaved by keeping the same state.
-    for (int channel = 0; channel < totalNumInputChannels; ++channel)
-    {
-        auto* channelData = buffer.getWritePointer (channel);
+    setLatencySamples(convolution.getLatency());
 
-        for (int sample = 0; sample < buffer.getNumSamples(); ++sample)
-        {
-            channelData[sample] = (randomGenerator.nextFloat() - 0.5f) * 0.1f;
-        }
-    }
+    const auto numChannels = jmax(getTotalNumInputChannels(), getTotalNumOutputChannels());
 
-    buffer.applyGain(*gainParameter);
+    auto inoutBlock = dsp::AudioBlock<float>(buffer).getSubsetChannelBlock(0, (size_t) numChannels);
+    juce::dsp::ProcessContextReplacing<float> processContext{inoutBlock};
+
+    convolution.process(processContext);
+    gain.process(processContext);
 }
 
 //==============================================================================

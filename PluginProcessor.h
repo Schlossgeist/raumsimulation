@@ -82,4 +82,10 @@ private:
     juce::AudioProcessorValueTreeState parameters;
 
     std::atomic<float>* gainParameter = nullptr;
+
+
+    juce::dsp::Convolution convolution{dsp::Convolution::NonUniform{512}};
+    juce::dsp::Gain<float> gain;
+
+    std::atomic<int> irSize{0};
 };
