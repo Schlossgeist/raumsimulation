@@ -12,8 +12,8 @@
 //==============================================================================
 RaumsimulationAudioProcessorEditor::RaumsimulationAudioProcessorEditor(RaumsimulationAudioProcessor& p, juce::AudioProcessorValueTreeState& pts)
     : AudioProcessorEditor(&p)
-    , openGLComponent(pts)
-    , impulseResponseComponent(pts)
+    , openGLComponent(p, pts)
+    , impulseResponseComponent(p, pts)
     , audioProcessor(p)
     , parameterTreeState(pts)
 {
@@ -28,6 +28,8 @@ RaumsimulationAudioProcessorEditor::RaumsimulationAudioProcessorEditor(Raumsimul
     addAndMakeVisible(gainSlider);
     gainSlider.setTextBoxStyle(juce::Slider::TextBoxBelow, false, gainSlider.getTextBoxWidth(), gainSlider.getTextBoxHeight());
     gainSlider.setSliderStyle(juce::Slider::RotaryVerticalDrag);
+    gainSlider.onValueChange = [this] { audioProcessor.updateParameters(); };
+
     gainLabel.attachToComponent(&gainSlider, false);
     gainAttachment.reset(new juce::AudioProcessorValueTreeState::SliderAttachment (parameterTreeState, "gain", gainSlider));
 }

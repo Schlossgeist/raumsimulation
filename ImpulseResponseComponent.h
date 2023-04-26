@@ -1,13 +1,14 @@
 #pragma once
 
 #include <JuceHeader.h>
+#include "PluginProcessor.h"
 
 class ImpulseResponseComponent : public juce::Component,
                                  public ChangeListener,
                                  public ChangeBroadcaster
 {
 public:
-    ImpulseResponseComponent(juce::AudioProcessorValueTreeState&);
+    ImpulseResponseComponent(RaumsimulationAudioProcessor&, juce::AudioProcessorValueTreeState&);
     ~ImpulseResponseComponent();
 
     void paint(juce::Graphics&) override;
@@ -18,6 +19,7 @@ private:
     void setURL(const URL&);
     void changeListenerCallback(ChangeBroadcaster*) override;
 
+    RaumsimulationAudioProcessor& audioProcessor;
     juce::AudioProcessorValueTreeState& parameters;
 
     AudioFormatManager formatManager;

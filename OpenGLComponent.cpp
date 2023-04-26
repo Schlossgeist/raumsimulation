@@ -31,7 +31,9 @@
 #include "OpenGLComponent.h"
 
 //==============================================================================
-OpenGLComponent::OpenGLComponent(juce::AudioProcessorValueTreeState& pts) : parameters(pts)
+OpenGLComponent::OpenGLComponent(RaumsimulationAudioProcessor& p, juce::AudioProcessorValueTreeState& pts)
+    : audioProcessor(p)
+    , parameters(pts)
 {
     objFileURL = static_cast<const juce::URL>(parameters.state.getProperty("obj_file_url"));
 

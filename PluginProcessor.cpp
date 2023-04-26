@@ -99,6 +99,8 @@ void RaumsimulationAudioProcessor::changeProgramName(int index, const juce::Stri
 //==============================================================================
 void RaumsimulationAudioProcessor::prepareToPlay(double sampleRate, int samplesPerBlock)
 {
+    reset();
+
     const auto channels = jmax(getTotalNumInputChannels(), getTotalNumOutputChannels());
 
     if (channels == 0)
@@ -198,4 +200,18 @@ void RaumsimulationAudioProcessor::setStateInformation (const void* data, int si
 juce::AudioProcessor* JUCE_CALLTYPE createPluginFilter()
 {
     return new RaumsimulationAudioProcessor();
+}
+
+void RaumsimulationAudioProcessor::updateParameters()
+{
+    auto const irFileURL = static_cast<const juce::URL>(parameters.state.getProperty("ir_file_url"));
+    convolution.loadImpulseResponse(irFileURL.getLocalFile(), juce::dsp::Convolution::Stereo::yes, juce::dsp::Convolution::Trim::no, 0);
+
+    gain.setGainLinear(*gainParameter);
+}
+
+void RaumsimulationAudioProcessor::reset()
+{
+    convolution.reset();
+    gain.reset();
 }

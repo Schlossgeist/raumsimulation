@@ -1,6 +1,7 @@
 #pragma once
 
 #include <JuceHeader.h>
+#include "PluginProcessor.h"
 #include "WavefrontObjParser.h"
 
 struct OpenGLUtils
@@ -549,7 +550,7 @@ class OpenGLComponent: public juce::Component,
                        private juce::AsyncUpdater
 {
 public:
-    OpenGLComponent(juce::AudioProcessorValueTreeState&);
+    OpenGLComponent(RaumsimulationAudioProcessor&, juce::AudioProcessorValueTreeState&);
     ~OpenGLComponent() override;
 
     void paint (juce::Graphics&) override;
@@ -582,6 +583,7 @@ private:
 
     juce::OpenGLContext openGLContext;
 
+    RaumsimulationAudioProcessor& audioProcessor;
     juce::AudioProcessorValueTreeState& parameters;
 
     //==============================================================================
@@ -777,6 +779,7 @@ private:
                             objFileLabel.setText(result.toString(false), sendNotificationAsync);
 
                             startTimer(10);
+                            openGLComponent.audioProcessor.updateParameters();
                         }
 
                         objFileChooser = nullptr;

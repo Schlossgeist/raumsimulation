@@ -1,8 +1,9 @@
 #include "ImpulseResponseComponent.h"
 
 
-ImpulseResponseComponent::ImpulseResponseComponent(juce::AudioProcessorValueTreeState& pts)
-    : parameters(pts)
+ImpulseResponseComponent::ImpulseResponseComponent(RaumsimulationAudioProcessor& p, juce::AudioProcessorValueTreeState& pts)
+    : audioProcessor(p)
+    , parameters(pts)
     , thumbnail(256, formatManager, thumbnailCache)
 {
     irFileURL = static_cast<const juce::URL>(parameters.state.getProperty("ir_file_url"));
@@ -78,6 +79,7 @@ void ImpulseResponseComponent::openFile()
                     parameters.state.setProperty("ir_file_url", result.toString(false), nullptr);
 
                     setURL(result);
+                    audioProcessor.updateParameters();
                 }
 
                 irFileChooser = nullptr;
