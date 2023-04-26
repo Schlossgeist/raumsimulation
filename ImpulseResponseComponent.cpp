@@ -25,6 +25,10 @@ ImpulseResponseComponent::ImpulseResponseComponent(RaumsimulationAudioProcessor&
 
     irFileLabel.attachToComponent(&irFileLoadButton, false);
     irFileLabel.setText(irFileURL.toString(false), sendNotificationAsync);
+
+    addAndMakeVisible(irSizeLabel);
+    irSizeLabel.setText(juce::String::formatted("%.2f s", thumbnail.getTotalLength()), dontSendNotification);
+    irSizeLabel.setJustificationType(Justification::right);
 }
 
 ImpulseResponseComponent::~ImpulseResponseComponent()
@@ -48,17 +52,20 @@ void ImpulseResponseComponent::paint(juce::Graphics & g)
 void ImpulseResponseComponent::resized()
 {
     auto area = getLocalBounds().reduced(5);
+    auto bottom = area.removeFromBottom(50);
 
-    irFileLoadButton.setBounds(area.removeFromBottom(25));
+    irFileLoadButton.setBounds(bottom.removeFromBottom(25));
+    irSizeLabel.setBounds(bottom.removeFromRight(100));
 }
 
 void ImpulseResponseComponent::setURL(const URL& url)
 {
     if (url.isLocalFile())
     {
-        irFileLabel.setText(url.toString(false), sendNotificationAsync);
-
         thumbnail.setSource(new FileInputSource(irFileURL.getLocalFile()));
+
+        irFileLabel.setText(url.toString(false), sendNotificationAsync);
+        irSizeLabel.setText(juce::String::formatted("%.2f s", thumbnail.getTotalLength()), dontSendNotification);
     }
 }
 

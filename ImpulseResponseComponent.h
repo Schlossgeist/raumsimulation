@@ -31,4 +31,6 @@ private:
     Label irFileLabel = {{}, "No file selected"};
     TextButton irFileLoadButton = {"Load audio File..." , "Choose a file that contains the impulse response you want to apply"};
     std::unique_ptr<juce::FileChooser> irFileChooser;
+
+    Label irSizeLabel;
 };
