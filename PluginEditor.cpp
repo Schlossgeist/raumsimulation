@@ -31,7 +31,7 @@ RaumsimulationAudioProcessorEditor::RaumsimulationAudioProcessorEditor(Raumsimul
     gainSlider.onValueChange = [this] { audioProcessor.updateParameters(); };
 
     gainLabel.attachToComponent(&gainSlider, false);
-    gainAttachment.reset(new juce::AudioProcessorValueTreeState::SliderAttachment (parameterTreeState, "gain", gainSlider));
+    gainAttachment.reset(new juce::AudioProcessorValueTreeState::SliderAttachment(parameterTreeState, "gain", gainSlider));
 }
 
 RaumsimulationAudioProcessorEditor::~RaumsimulationAudioProcessorEditor()

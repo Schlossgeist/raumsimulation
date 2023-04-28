@@ -22,7 +22,7 @@ RaumsimulationAudioProcessor::RaumsimulationAudioProcessor()
                        )
      , parameters(*this, nullptr, juce::Identifier("Parameters"),
                  {
-                         std::make_unique<juce::AudioParameterFloat>("gain", "Gain", 0.0f, 1.0f, 0.5f)
+                         std::make_unique<juce::AudioParameterFloat>("gain", "Gain", -24.0f, 24.0f, 0.0f)
                  })
 #endif
 {
@@ -112,7 +112,7 @@ void RaumsimulationAudioProcessor::prepareToPlay(double sampleRate, int samplesP
     convolution.loadImpulseResponse(irFileURL.getLocalFile(), juce::dsp::Convolution::Stereo::yes, juce::dsp::Convolution::Trim::yes, 0);
     convolution.prepare(processSpec);
 
-    gain.setGainLinear(*gainParameter);
+    gain.setGainDecibels(*gainParameter);
     gain.prepare(processSpec);
 }
 
@@ -207,7 +207,7 @@ void RaumsimulationAudioProcessor::updateParameters()
     auto const irFileURL = static_cast<const juce::URL>(parameters.state.getProperty("ir_file_url"));
     convolution.loadImpulseResponse(irFileURL.getLocalFile(), juce::dsp::Convolution::Stereo::yes, juce::dsp::Convolution::Trim::yes, 0);
 
-    gain.setGainLinear(*gainParameter);
+    gain.setGainDecibels(*gainParameter);
 }
 
 void RaumsimulationAudioProcessor::reset()

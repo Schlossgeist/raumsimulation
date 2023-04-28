@@ -9,6 +9,7 @@
 #pragma once
 
 #include <JuceHeader.h>
+#include "DecibelSlider.h"
 #include "PluginProcessor.h"
 #include "OpenGLComponent.h"
 #include "ImpulseResponseComponent.h"
@@ -34,7 +35,7 @@ private:
     juce::AudioProcessorValueTreeState& parameterTreeState;
 
     juce::Label gainLabel{{}, "Gain"};
-    juce::Slider gainSlider;
+    DecibelSlider gainSlider;
     std::unique_ptr<juce::AudioProcessorValueTreeState::SliderAttachment> gainAttachment;
 
     OpenGLComponent openGLComponent;

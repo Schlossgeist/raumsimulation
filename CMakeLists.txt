@@ -39,7 +39,7 @@ add_subdirectory(externals/JUCE)            # If you've put JUCE in a subdirecto
 
 juce_add_plugin(Raumsimulation
       VERSION 0.0.1                             # Set this if the plugin version is different to the project version
-    # ICON_BIG ...                              # ICON_* arguments specify a path to an image file to use as an icon for the Standalone
+      ICON_BIG ./Resources/icon.png             # ICON_* arguments specify a path to an image file to use as an icon for the Standalone
     # ICON_SMALL ...
       COMPANY_NAME TU\ Dresden                  # Specify the name of the plugin's author
       IS_SYNTH FALSE                            # Is this a synth or an effect?
@@ -69,6 +69,7 @@ juce_add_plugin(Raumsimulation
 
 target_sources(Raumsimulation
     PRIVATE
+        DecibelSlider.h
         ImpulseResponseComponent.cpp
         ImpulseResponseComponent.h
         OpenGLComponent.cpp
