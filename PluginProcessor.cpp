@@ -109,7 +109,7 @@ void RaumsimulationAudioProcessor::prepareToPlay(double sampleRate, int samplesP
     juce::dsp::ProcessSpec processSpec{sampleRate, (uint32) samplesPerBlock, (uint32) channels};
 
     auto const irFileURL = static_cast<const juce::URL>(parameters.state.getProperty("ir_file_url"));
-    convolution.loadImpulseResponse(irFileURL.getLocalFile(), juce::dsp::Convolution::Stereo::yes, juce::dsp::Convolution::Trim::no, 0);
+    convolution.loadImpulseResponse(irFileURL.getLocalFile(), juce::dsp::Convolution::Stereo::yes, juce::dsp::Convolution::Trim::yes, 0);
     convolution.prepare(processSpec);
 
     gain.setGainLinear(*gainParameter);
@@ -205,7 +205,7 @@ juce::AudioProcessor* JUCE_CALLTYPE createPluginFilter()
 void RaumsimulationAudioProcessor::updateParameters()
 {
     auto const irFileURL = static_cast<const juce::URL>(parameters.state.getProperty("ir_file_url"));
-    convolution.loadImpulseResponse(irFileURL.getLocalFile(), juce::dsp::Convolution::Stereo::yes, juce::dsp::Convolution::Trim::no, 0);
+    convolution.loadImpulseResponse(irFileURL.getLocalFile(), juce::dsp::Convolution::Stereo::yes, juce::dsp::Convolution::Trim::yes, 0);
 
     gain.setGainLinear(*gainParameter);
 }
