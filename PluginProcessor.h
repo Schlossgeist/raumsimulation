@@ -59,6 +59,9 @@ public:
     void updateParameters();
     void reset() override;
 
+    juce::AudioBuffer<float> ir;
+    AudioTransportSource transportSource;
+
 private:
     //==============================================================================
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(RaumsimulationAudioProcessor)

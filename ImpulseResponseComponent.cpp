@@ -16,8 +16,6 @@ ImpulseResponseComponent::ImpulseResponseComponent(RaumsimulationAudioProcessor&
     formatManager.registerFormat(new OggVorbisAudioFormat(), false);
     formatManager.registerFormat(new WavAudioFormat(), false);
 
-    setURL(irFileURL); // has to come after registering the audio formats
-
     addAndMakeVisible(irFileLoadButton);
     irFileLoadButton.setColour(TextButton::buttonColourId, Colour (0xff797fed));
     irFileLoadButton.setColour(TextButton::textColourOffId, Colours::black);
@@ -29,10 +27,25 @@ ImpulseResponseComponent::ImpulseResponseComponent(RaumsimulationAudioProcessor&
     addAndMakeVisible(irSizeLabel);
     irSizeLabel.setText(juce::String::formatted("%.2f s", thumbnail.getTotalLength()), dontSendNotification);
     irSizeLabel.setJustificationType(Justification::right);
+
+    addAndMakeVisible(playPauseButton);
+    playPauseButton.setColour(TextButton::buttonColourId, Colour(0xff79ed7f));
+    playPauseButton.setColour(TextButton::textColourOffId, Colours::black);
+    playPauseButton.onClick = [this] { playPause(); };
+
+    audioDeviceManager.addAudioCallback(&audioSourcePlayer);
+    audioSourcePlayer.setSource(&audioProcessor.transportSource);
+
+    setURL(irFileURL); // has to come after registering the audio formats
 }
 
 ImpulseResponseComponent::~ImpulseResponseComponent()
 {
+    audioProcessor.transportSource.setSource(nullptr);
+    audioSourcePlayer.setSource(nullptr);
+
+    audioDeviceManager.removeAudioCallback(&audioSourcePlayer);
+
     thumbnail.removeChangeListener(this);
 }
 
@@ -54,7 +67,11 @@ void ImpulseResponseComponent::resized()
     auto area = getLocalBounds().reduced(5);
     auto bottom = area.removeFromBottom(50);
 
-    irFileLoadButton.setBounds(bottom.removeFromBottom(25));
+    auto buttons = bottom.removeFromBottom(25);
+
+    playPauseButton.setBounds(buttons.removeFromLeft(100));
+    buttons.removeFromLeft(5);      // little space between buttons
+    irFileLoadButton.setBounds(buttons);
     irSizeLabel.setBounds(bottom.removeFromRight(100));
 }
 
@@ -62,8 +79,27 @@ void ImpulseResponseComponent::setURL(const URL& url)
 {
     if (url.isLocalFile())
     {
-        thumbnail.setSource(new FileInputSource(irFileURL.getLocalFile()));
+        auto source = new FileInputSource(irFileURL.getLocalFile());
 
+        audioProcessor.transportSource.stop();
+        audioProcessor.transportSource.setSource(nullptr);
+        currentAudioFileSource.reset();
+
+        auto stream = rawToUniquePtr(source->createInputStream());
+
+        if (stream != nullptr) {
+            auto reader = rawToUniquePtr(formatManager.createReaderFor(std::move(stream)));
+
+            if (reader != nullptr) {
+                audioProcessor.ir.setSize(reader->numChannels, reader->lengthInSamples);
+                reader->read(&audioProcessor.ir, 0, audioProcessor.ir.getNumSamples(), 0, true, true);
+
+                currentAudioFileSource = std::make_unique<AudioFormatReaderSource>(reader.release(), true);
+                audioProcessor.transportSource.setSource(currentAudioFileSource.get(), 0, nullptr, currentAudioFileSource->getAudioFormatReader()->sampleRate);
+            }
+        }
+
+        thumbnail.setSource(source);
         irFileLabel.setText(url.toString(false), sendNotificationAsync);
         irSizeLabel.setText(juce::String::formatted("%.2f s", thumbnail.getTotalLength()), dontSendNotification);
     }
@@ -96,4 +132,11 @@ void ImpulseResponseComponent::openFile()
 void ImpulseResponseComponent::changeListenerCallback (ChangeBroadcaster*)
 {
     repaint();
+}
+
+void ImpulseResponseComponent::playPause()
+{
+    audioProcessor.transportSource.stop();
+    audioProcessor.transportSource.setPosition(0);
+    audioProcessor.transportSource.start();
 }

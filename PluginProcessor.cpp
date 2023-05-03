@@ -108,12 +108,13 @@ void RaumsimulationAudioProcessor::prepareToPlay(double sampleRate, int samplesP
 
     juce::dsp::ProcessSpec processSpec{sampleRate, (uint32) samplesPerBlock, (uint32) channels};
 
-    auto const irFileURL = static_cast<const juce::URL>(parameters.state.getProperty("ir_file_url"));
-    convolution.loadImpulseResponse(irFileURL.getLocalFile(), juce::dsp::Convolution::Stereo::yes, juce::dsp::Convolution::Trim::yes, 0);
+    convolution.loadImpulseResponse(std::move(ir), processSpec.sampleRate, juce::dsp::Convolution::Stereo::yes, juce::dsp::Convolution::Trim::yes, juce::dsp::Convolution::Normalise::no);
     convolution.prepare(processSpec);
 
     gain.setGainDecibels(*gainParameter);
     gain.prepare(processSpec);
+
+    transportSource.prepareToPlay(samplesPerBlock, sampleRate);
 }
 
 void RaumsimulationAudioProcessor::releaseResources()
@@ -162,7 +163,12 @@ void RaumsimulationAudioProcessor::processBlock(juce::AudioBuffer<float>& buffer
     auto inoutBlock = dsp::AudioBlock<float>(buffer).getSubsetChannelBlock(0, (size_t) numChannels);
     juce::dsp::ProcessContextReplacing<float> processContext{inoutBlock};
 
-    convolution.process(processContext);
+    if (transportSource.isPlaying()) {
+        transportSource.getNextAudioBlock(AudioSourceChannelInfo(buffer));
+    } else {
+        convolution.process(processContext);
+    }
+
     gain.process(processContext);
 }
 
