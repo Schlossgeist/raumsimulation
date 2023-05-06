@@ -28,10 +28,17 @@ RaumsimulationAudioProcessor::RaumsimulationAudioProcessor()
 {
     parameters.state.appendChild(settings, nullptr);
     gainParameter = parameters.getRawParameterValue("gain");
+
+    audioDeviceManager.addAudioCallback(&audioSourcePlayer);
+    audioSourcePlayer.setSource(&transportSource);
 }
 
 RaumsimulationAudioProcessor::~RaumsimulationAudioProcessor()
 {
+    transportSource.setSource(nullptr);
+    audioSourcePlayer.setSource(nullptr);
+
+    audioDeviceManager.removeAudioCallback(&audioSourcePlayer);
 }
 
 //==============================================================================
@@ -108,13 +115,16 @@ void RaumsimulationAudioProcessor::prepareToPlay(double sampleRate, int samplesP
 
     juce::dsp::ProcessSpec processSpec{sampleRate, (uint32) samplesPerBlock, (uint32) channels};
 
+    irAudioSource = std::make_unique<MemoryAudioSource>(ir, false);
+    transportSource.stop();
+    transportSource.setSource(irAudioSource.get(), 0, nullptr, sampleRate);
+    transportSource.prepareToPlay(samplesPerBlock, sampleRate);
+
     convolution.loadImpulseResponse(std::move(ir), processSpec.sampleRate, juce::dsp::Convolution::Stereo::yes, juce::dsp::Convolution::Trim::yes, juce::dsp::Convolution::Normalise::no);
     convolution.prepare(processSpec);
 
     gain.setGainDecibels(*gainParameter);
     gain.prepare(processSpec);
-
-    transportSource.prepareToPlay(samplesPerBlock, sampleRate);
 }
 
 void RaumsimulationAudioProcessor::releaseResources()

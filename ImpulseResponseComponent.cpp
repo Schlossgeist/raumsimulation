@@ -29,23 +29,16 @@ ImpulseResponseComponent::ImpulseResponseComponent(RaumsimulationAudioProcessor&
     irSizeLabel.setJustificationType(Justification::right);
 
     addAndMakeVisible(playPauseButton);
-    playPauseButton.setColour(TextButton::buttonColourId, Colour(0xff79ed7f));
+    playPauseButton.setButtonText("Play");
+    playPauseButton.setColour(TextButton::buttonColourId, Colour(0xff009900));
     playPauseButton.setColour(TextButton::textColourOffId, Colours::black);
     playPauseButton.onClick = [this] { playPause(); };
-
-    audioDeviceManager.addAudioCallback(&audioSourcePlayer);
-    audioSourcePlayer.setSource(&audioProcessor.transportSource);
 
     setURL(irFileURL); // has to come after registering the audio formats
 }
 
 ImpulseResponseComponent::~ImpulseResponseComponent()
 {
-    audioProcessor.transportSource.setSource(nullptr);
-    audioSourcePlayer.setSource(nullptr);
-
-    audioDeviceManager.removeAudioCallback(&audioSourcePlayer);
-
     thumbnail.removeChangeListener(this);
 }
 
@@ -81,28 +74,30 @@ void ImpulseResponseComponent::setURL(const URL& url)
     {
         auto source = new FileInputSource(irFileURL.getLocalFile());
 
-        audioProcessor.transportSource.stop();
-        audioProcessor.transportSource.setSource(nullptr);
-        currentAudioFileSource.reset();
+        if (source != nullptr) {
 
-        auto stream = rawToUniquePtr(source->createInputStream());
 
-        if (stream != nullptr) {
-            auto reader = rawToUniquePtr(formatManager.createReaderFor(std::move(stream)));
+            auto stream = rawToUniquePtr(source->createInputStream());
 
-            if (reader != nullptr) {
-                audioProcessor.ir.setSize(reader->numChannels, reader->lengthInSamples);
-                reader->read(&audioProcessor.ir, 0, audioProcessor.ir.getNumSamples(), 0, true, true);
+            if (stream != nullptr) {
+                auto reader = rawToUniquePtr(formatManager.createReaderFor(std::move(stream)));
 
-                currentAudioFileSource = std::make_unique<AudioFormatReaderSource>(reader.release(), true);
-                audioProcessor.transportSource.setSource(currentAudioFileSource.get(), 0, nullptr, currentAudioFileSource->getAudioFormatReader()->sampleRate);
+                if (reader != nullptr) {
+                    audioProcessor.ir.setSize((int) reader->numChannels, (int) reader->lengthInSamples);
+                    reader->read(&audioProcessor.ir, 0, audioProcessor.ir.getNumSamples(), 0, true, true);
+
+                    updateThumbnail(reader->sampleRate);
+                }
             }
         }
-
-        thumbnail.setSource(source);
-        irFileLabel.setText(url.toString(false), sendNotificationAsync);
-        irSizeLabel.setText(juce::String::formatted("%.2f s", thumbnail.getTotalLength()), dontSendNotification);
     }
+}
+
+void ImpulseResponseComponent::updateThumbnail(double sampleRate)
+{
+    thumbnail.setSource(&audioProcessor.ir, sampleRate, Uuid().hash());
+    irFileLabel.setText(irFileURL.toString(false), sendNotificationAsync);
+    irSizeLabel.setText(juce::String::formatted("%.2f s", thumbnail.getTotalLength()), dontSendNotification);
 }
 
 void ImpulseResponseComponent::openFile()
@@ -136,7 +131,14 @@ void ImpulseResponseComponent::changeListenerCallback (ChangeBroadcaster*)
 
 void ImpulseResponseComponent::playPause()
 {
-    audioProcessor.transportSource.stop();
-    audioProcessor.transportSource.setPosition(0);
-    audioProcessor.transportSource.start();
+    if (audioProcessor.transportSource.isPlaying()) {
+        audioProcessor.transportSource.stop();
+        playPauseButton.setButtonText("Play");
+        playPauseButton.setColour(TextButton::buttonColourId, Colour(0xff009900));
+    } else {
+        audioProcessor.transportSource.setPosition(0);
+        audioProcessor.transportSource.start();
+        playPauseButton.setButtonText("Stop");
+        playPauseButton.setColour(TextButton::buttonColourId, Colour(0xff990000));
+    }
 }

@@ -60,6 +60,11 @@ public:
     void reset() override;
 
     juce::AudioBuffer<float> ir;
+
+    AudioDeviceManager audioDeviceManager;
+    AudioSourcePlayer audioSourcePlayer;
+
+    std::unique_ptr<MemoryAudioSource> irAudioSource;
     AudioTransportSource transportSource;
 
 private:

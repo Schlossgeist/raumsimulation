@@ -19,18 +19,14 @@ private:
     void setURL(const URL&);
     void changeListenerCallback(ChangeBroadcaster*) override;
     void playPause();
+    void updateThumbnail(double sampleRate);
 
     RaumsimulationAudioProcessor& audioProcessor;
     juce::AudioProcessorValueTreeState& parameters;
 
-    AudioDeviceManager audioDeviceManager;
     AudioFormatManager formatManager;
     juce::AudioThumbnailCache thumbnailCache{3};
     juce::AudioThumbnail thumbnail;
-
-
-    AudioSourcePlayer audioSourcePlayer;
-    std::unique_ptr<AudioFormatReaderSource> currentAudioFileSource;
 
     juce::URL irFileURL = {};
 
