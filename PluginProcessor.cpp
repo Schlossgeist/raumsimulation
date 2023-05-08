@@ -28,17 +28,10 @@ RaumsimulationAudioProcessor::RaumsimulationAudioProcessor()
 {
     parameters.state.appendChild(settings, nullptr);
     gainParameter = parameters.getRawParameterValue("gain");
-
-    audioDeviceManager.addAudioCallback(&audioSourcePlayer);
-    audioSourcePlayer.setSource(&transportSource);
 }
 
 RaumsimulationAudioProcessor::~RaumsimulationAudioProcessor()
 {
-    transportSource.setSource(nullptr);
-    audioSourcePlayer.setSource(nullptr);
-
-    audioDeviceManager.removeAudioCallback(&audioSourcePlayer);
 }
 
 //==============================================================================
@@ -115,16 +108,15 @@ void RaumsimulationAudioProcessor::prepareToPlay(double sampleRate, int samplesP
 
     juce::dsp::ProcessSpec processSpec{sampleRate, (uint32) samplesPerBlock, (uint32) channels};
 
-    irAudioSource = std::make_unique<MemoryAudioSource>(ir, false);
-    transportSource.stop();
-    transportSource.setSource(irAudioSource.get(), 0, nullptr, sampleRate);
-    transportSource.prepareToPlay(samplesPerBlock, sampleRate);
-
     convolution.loadImpulseResponse(std::move(ir), processSpec.sampleRate, juce::dsp::Convolution::Stereo::yes, juce::dsp::Convolution::Trim::yes, juce::dsp::Convolution::Normalise::no);
     convolution.prepare(processSpec);
 
     gain.setGainDecibels(*gainParameter);
     gain.prepare(processSpec);
+
+    globalSampleRate = sampleRate;
+
+    irBufferPosition = 0;
 }
 
 void RaumsimulationAudioProcessor::releaseResources()
@@ -169,14 +161,32 @@ void RaumsimulationAudioProcessor::processBlock(juce::AudioBuffer<float>& buffer
     setLatencySamples(convolution.getLatency());
 
     const auto numChannels = jmax(getTotalNumInputChannels(), getTotalNumOutputChannels());
+    const auto numSamples = buffer.getNumSamples();
 
     auto inoutBlock = dsp::AudioBlock<float>(buffer).getSubsetChannelBlock(0, (size_t) numChannels);
     juce::dsp::ProcessContextReplacing<float> processContext{inoutBlock};
 
-    if (transportSource.isPlaying()) {
-        transportSource.getNextAudioBlock(AudioSourceChannelInfo(buffer));
-    } else {
-        convolution.process(processContext);
+    convolution.process(processContext);
+
+    if (play && ir.getNumSamples() > 0) {
+
+        auto lengthInSecs = ir.getNumSamples()/globalSampleRate;
+
+        auto* writePtrArray = buffer.getArrayOfWritePointers();
+        auto* readPtrArray = ir.getArrayOfReadPointers();
+
+        for (auto sample = 0; sample < numSamples; ++sample) {
+            for (auto channel = 0; channel < numChannels; ++channel) {
+                writePtrArray[channel][sample] += + readPtrArray[channel][irBufferPosition];
+            }
+            irBufferPosition++;
+
+            if (irBufferPosition >= ir.getNumSamples() - 1) {
+                irBufferPosition = 0;
+                play = false;
+                break;
+            }
+        }
     }
 
     gain.process(processContext);
@@ -230,4 +240,10 @@ void RaumsimulationAudioProcessor::reset()
 {
     convolution.reset();
     gain.reset();
+}
+
+void RaumsimulationAudioProcessor::playIR()
+{
+    irBufferPosition = 0;
+    play = true;
 }

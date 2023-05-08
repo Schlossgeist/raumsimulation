@@ -32,7 +32,7 @@ ImpulseResponseComponent::ImpulseResponseComponent(RaumsimulationAudioProcessor&
     playPauseButton.setButtonText("Play");
     playPauseButton.setColour(TextButton::buttonColourId, Colour(0xff009900));
     playPauseButton.setColour(TextButton::textColourOffId, Colours::black);
-    playPauseButton.onClick = [this] { playPause(); };
+    playPauseButton.onClick = [this] { audioProcessor.playIR(); };
 
     setURL(irFileURL); // has to come after registering the audio formats
 }
@@ -127,18 +127,4 @@ void ImpulseResponseComponent::openFile()
 void ImpulseResponseComponent::changeListenerCallback (ChangeBroadcaster*)
 {
     repaint();
-}
-
-void ImpulseResponseComponent::playPause()
-{
-    if (audioProcessor.transportSource.isPlaying()) {
-        audioProcessor.transportSource.stop();
-        playPauseButton.setButtonText("Play");
-        playPauseButton.setColour(TextButton::buttonColourId, Colour(0xff009900));
-    } else {
-        audioProcessor.transportSource.setPosition(0);
-        audioProcessor.transportSource.start();
-        playPauseButton.setButtonText("Stop");
-        playPauseButton.setColour(TextButton::buttonColourId, Colour(0xff990000));
-    }
 }

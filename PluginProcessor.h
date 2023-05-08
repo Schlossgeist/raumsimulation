@@ -58,14 +58,13 @@ public:
 
     void updateParameters();
     void reset() override;
+    void playIR();
 
     juce::AudioBuffer<float> ir;
+    int irBufferPosition = 0;
+    bool play = false;
 
-    AudioDeviceManager audioDeviceManager;
-    AudioSourcePlayer audioSourcePlayer;
-
-    std::unique_ptr<MemoryAudioSource> irAudioSource;
-    AudioTransportSource transportSource;
+    double globalSampleRate = 0;
 
 private:
     //==============================================================================

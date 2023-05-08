@@ -18,7 +18,6 @@ private:
     void openFile();
     void setURL(const URL&);
     void changeListenerCallback(ChangeBroadcaster*) override;
-    void playPause();
     void updateThumbnail(double sampleRate);
 
     RaumsimulationAudioProcessor& audioProcessor;
