@@ -780,6 +780,8 @@ private:
 
                             startTimer(10);
                             openGLComponent.audioProcessor.updateParameters();
+
+                            openGLComponent.audioProcessor.raytracer.setRoom(result.getLocalFile());
                         }
 
                         objFileChooser = nullptr;

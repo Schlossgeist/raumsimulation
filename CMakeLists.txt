@@ -78,6 +78,8 @@ target_sources(Raumsimulation
         PluginEditor.h
         PluginProcessor.cpp
         PluginProcessor.h
+        Raytracer.cpp
+        Raytracer.h
         WavefrontObjParser.h)
 
 # `target_compile_definitions` adds some preprocessor definitions to our target. In a Projucer

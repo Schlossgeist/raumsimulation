@@ -9,6 +9,7 @@
 #pragma once
 
 #include <JuceHeader.h>
+#include "Raytracer.h"
 
 //==============================================================================
 /**
@@ -65,6 +66,8 @@ public:
     bool play = false;
 
     double globalSampleRate = 0;
+
+    Raytracer raytracer;
 
 private:
     //==============================================================================

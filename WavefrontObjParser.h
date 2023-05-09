@@ -81,10 +81,30 @@ public:
         StringPairArray parameters;
     };
 
+    struct Surface {
+        Array<Vertex> vertices;
+        Vertex normal;
+
+    };
+
+    struct AbsorptionCoefficients {
+        float* absorption_coefficients = new float[6];
+
+        float& operator[](int index) const {
+            if (0 <= index && index < 6) {
+                return absorption_coefficients[index];
+            } else {
+                throw std::out_of_range("You tried to access an out of range absorption coefficient. There are only 6 coefficients.");
+            }
+        }
+    };
+
     struct Shape
     {
         String name;
         Mesh mesh;
+        Array<Surface> surfaces;
+        AbsorptionCoefficients absorption_coefficients;
         Material material;
     };
 
@@ -163,6 +183,35 @@ private:
         tc.x = parseFloat (t);
         tc.y = parseFloat (t);
         return tc;
+    }
+
+    static AbsorptionCoefficients parseAbsorptionCoefficients(String::CharPointerType t)
+    {
+        AbsorptionCoefficients absorptionCoefficients;
+
+        while (*t != '[') {
+            t++;
+        }
+
+        t++;
+
+        for (int i = 0; i < 6; i++) {
+            float value = (float) t.getDoubleValue();
+            absorptionCoefficients[i] = value;
+
+            while (*t != '/') {
+                if (*t == ']') {
+                    break;
+                }
+                t++;
+            }
+
+            if (*t == '/') {
+                t++;
+            }
+        }
+
+        return absorptionCoefficients;
     }
 
     static bool matchToken (String::CharPointerType& t, const char* token)
@@ -254,11 +303,22 @@ private:
         std::unique_ptr<Shape> shape (new Shape());
         shape->name = name;
         shape->material = material;
+        shape->absorption_coefficients = parseAbsorptionCoefficients(material.name.getCharPointer());
 
         IndexMap indexMap;
 
-        for (auto& f : faceGroup)
+        for (auto& f : faceGroup) {
             f.addIndices (shape->mesh, srcMesh, indexMap);
+
+            Surface surface;
+
+            for (TripleIndex index : f.triples) {
+                surface.normal = srcMesh.normals[index.normalIndex];
+                surface.vertices.add(srcMesh.vertices[index.vertexIndex]);
+            }
+
+            shape->surfaces.add(surface);
+        }
 
         return shape.release();
     }
