@@ -210,115 +210,57 @@ void OpenGLComponent::setShaderProgram(const String& vertexShader, const String&
 {
     const ScopedLock lock(shaderMutex); // Prevent concurrent access to shader strings and status
 
-    OpenGLUtils::ShaderPreset roomPreset =
+    auto roomShaderStream = new MemoryInputStream(BinaryData::room_shader, BinaryData::room_shaderSize, true);
+    auto microphoneShaderStream = new MemoryInputStream(BinaryData::microphone_shader, BinaryData::microphone_shaderSize, true);
+    auto speakerShaderStream = new MemoryInputStream(BinaryData::speaker_shader, BinaryData::speaker_shaderSize, true);
+
+
+    newVertexShader = parseShader(*roomShaderStream, SHADER_VERTEX);
+    newFragmentShader = parseShader(*roomShaderStream, SHADER_FRAGMENT);
+
+    newMicrophoneVertexShader = parseShader(*microphoneShaderStream, SHADER_VERTEX);
+    newMicrophoneFragmentShader = parseShader(*microphoneShaderStream, SHADER_FRAGMENT);
+
+    newSpeakerVertexShader = parseShader(*speakerShaderStream, SHADER_VERTEX);
+    newSpeakerFragmentShader = parseShader(*speakerShaderStream, SHADER_FRAGMENT);
+}
+
+static bool matchToken (String::CharPointerType& t, const char* token)
+{
+    auto len = (int) strlen (token);
+
+    if (CharacterFunctions::compareUpTo (CharPointer_ASCII (token), t, len) == 0)
     {
-        "Room Shader",
+        auto end = t + len;
 
-        SHADER_DEMO_HEADER
-        "in vec4 position;\n"
-        "in vec4 sourceColour;\n"
-        "in vec2 textureCoordIn;\n"
-        "\n"
-        "uniform mat4 projectionMatrix;\n"
-        "uniform mat4 viewMatrix;\n"
-        "\n"
-        "out vec4 destinationColour;\n"
-        "out vec2 textureCoordOut;\n"
-        "\n"
-        "void main()\n"
-        "{\n"
-        "    destinationColour = sourceColour;\n"
-        "    textureCoordOut = textureCoordIn;\n"
-        "    gl_Position = projectionMatrix * viewMatrix * position;\n"
-        "}\n",
+        if (end.isEmpty() || end.isWhitespace())
+        {
+            t = end.findEndOfWhitespace();
+            return true;
+        }
+    }
 
-        SHADER_DEMO_HEADER
-        "varying vec4 destinationColour;\n"
-        "varying vec2 textureCoordOut;\n"
-        "\n"
-        "void main()\n"
-        "{\n"
-        "   vec4 colour = vec4(0.50, 0.50, 0.50, 0.50);\n"
-        "   gl_FragColor = colour;\n"
-        "}\n"
-    };
+    return false;
+}
 
-    OpenGLUtils::ShaderPreset microphonePreset =
-    {
-        "Microphone Shader",
+String OpenGLComponent::parseShader(const MemoryInputStream& shader_stream, ShaderType shaderToExtract)
+{
+    ShaderType currentShaderType = SHADER_NONE;
+    String result;
+    StringArray lines = StringArray::fromLines(String((const char*) shader_stream.getData()));
 
-        SHADER_DEMO_HEADER
-        "in vec4 position;\n"
-        "in vec4 sourceColour;\n"
-        "in vec2 textureCoordIn;\n"
-        "\n"
-        "uniform mat4 projectionMatrix;\n"
-        "uniform mat4 viewMatrix;\n"
-        "uniform mat4 positionMatrix;\n"
-        "uniform mat4 rotationMatrix;\n"
-        "\n"
-        "out vec4 destinationColour;\n"
-        "out vec2 textureCoordOut;\n"
-        "\n"
-        "void main()\n"
-        "{\n"
-        "    destinationColour = sourceColour;\n"
-        "    textureCoordOut = textureCoordIn;\n"
-        "    gl_Position = projectionMatrix * viewMatrix * positionMatrix * position;\n"
-        "}\n",
+    for (auto lineNum = 0; lineNum < lines.size() - 1; ++lineNum) {
+        auto l = lines[lineNum].getCharPointer().findEndOfWhitespace();
 
-        SHADER_DEMO_HEADER
-        "out vec4 destinationColour;\n"
-        "out vec2 textureCoordOut;\n"
-        "\n"
-        "void main()\n"
-        "{\n"
-        "   vec4 colour = vec4(0.50, 0.00, 0.00, 0.75);\n"
-        "   gl_FragColor = colour;\n"
-        "}\n"
-    };
+        if (matchToken (l, "#SHADER_VERTEX"))       { currentShaderType = SHADER_VERTEX;       continue; }
+        if (matchToken (l, "#SHADER_FRAGMENT"))     { currentShaderType = SHADER_FRAGMENT;     continue; }
+        if (matchToken (l, "#SHADER_COMPUTE"))      { currentShaderType = SHADER_COMPUTE;      continue; }
 
-    OpenGLUtils::ShaderPreset speakerPreset =
-    {
-        "Speaker Shader",
+        if (shaderToExtract == currentShaderType) {
+            result += String(l).trim();
+            result += "\n";
+        }
+    }
 
-        SHADER_DEMO_HEADER
-        "in vec4 position;\n"
-        "in vec4 sourceColour;\n"
-        "in vec2 textureCoordIn;\n"
-        "\n"
-        "uniform mat4 projectionMatrix;\n"
-        "uniform mat4 viewMatrix;\n"
-        "uniform mat4 positionMatrix;\n"
-        "uniform mat4 rotationMatrix;\n"
-        "\n"
-        "out vec4 destinationColour;\n"
-        "out vec2 textureCoordOut;\n"
-        "\n"
-        "void main()\n"
-        "{\n"
-        "    destinationColour = sourceColour;\n"
-        "    textureCoordOut = textureCoordIn;\n"
-        "    gl_Position = projectionMatrix * viewMatrix * positionMatrix * position;\n"
-        "}\n",
-
-        SHADER_DEMO_HEADER
-        "out vec4 destinationColour;\n"
-        "out vec2 textureCoordOut;\n"
-        "\n"
-        "void main()\n"
-        "{\n"
-        "   vec4 colour = vec4(0.00, 0.00, 0.50, 0.75);\n"
-        "   gl_FragColor = colour;\n"
-        "}\n"
-    };
-
-    newVertexShader = roomPreset.vertexShader;
-    newFragmentShader = roomPreset.fragmentShader;
-
-    newMicrophoneVertexShader = microphonePreset.vertexShader;
-    newMicrophoneFragmentShader = microphonePreset.fragmentShader;
-
-    newSpeakerVertexShader = speakerPreset.vertexShader;
-    newSpeakerFragmentShader = speakerPreset.fragmentShader;
+    return result;
 }

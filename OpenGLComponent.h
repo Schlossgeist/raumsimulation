@@ -567,6 +567,15 @@ public:
 
     Matrix3D<float> getProjectionMatrix() const;
     Matrix3D<float> getViewMatrix() const;
+
+    enum ShaderType {
+        SHADER_NONE,
+        SHADER_VERTEX,
+        SHADER_FRAGMENT,
+        SHADER_COMPUTE
+    };
+
+    static String parseShader(const MemoryInputStream& shader_stream, ShaderType shaderToExtract);
     void setShaderProgram(const String& vertexShader, const String& fragmentShader);
 
     Rectangle<int> bounds;

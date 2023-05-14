@@ -39,7 +39,7 @@ add_subdirectory(externals/JUCE)            # If you've put JUCE in a subdirecto
 
 juce_add_plugin(Raumsimulation
       VERSION 0.0.1                             # Set this if the plugin version is different to the project version
-      ICON_BIG ./Resources/icon.png             # ICON_* arguments specify a path to an image file to use as an icon for the Standalone
+      ICON_BIG ./resources/icon.png             # ICON_* arguments specify a path to an image file to use as an icon for the Standalone
     # ICON_SMALL ...
       COMPANY_NAME TU\ Dresden                  # Specify the name of the plugin's author
       IS_SYNTH FALSE                            # Is this a synth or an effect?
@@ -47,7 +47,8 @@ juce_add_plugin(Raumsimulation
       NEEDS_MIDI_OUTPUT FALSE                   # Does the plugin need midi output?
       IS_MIDI_EFFECT FALSE                      # Is this plugin a MIDI effect?
       EDITOR_WANTS_KEYBOARD_FOCUS FALSE         # Does the editor need keyboard focus?
-    # COPY_PLUGIN_AFTER_BUILD TRUE/FALSE        # Should the plugin be installed to a default location after building?
+      COPY_PLUGIN_AFTER_BUILD TRUE              # Should the plugin be installed to a default location after building?
+      VST3_COPY_DIR "X:/VST3"
     PLUGIN_MANUFACTURER_CODE Tudd               # A four-character manufacturer id with at least one upper-case character
     PLUGIN_CODE Rsim                            # A unique four-character plugin id with exactly one upper-case character
                                                 # GarageBand 10.3 requires the first letter to be upper-case, and the remaining letters to be lower-case
@@ -60,7 +61,7 @@ juce_add_plugin(Raumsimulation
 # include all your JUCE module headers; if you're happy to include module headers directly, you
 # probably don't need to call this.
 
-  juce_generate_juce_header(Raumsimulation)
+juce_generate_juce_header(Raumsimulation)
 
 # `target_sources` adds source files to a target. We pass the target that needs the sources as the
 # first argument, then a visibility parameter for the sources which should normally be PRIVATE.
@@ -103,7 +104,14 @@ target_compile_definitions(Raumsimulation
 # static library. These source files can be of any kind (wav data, images, fonts, icons etc.).
 # Conversion to binary-data will happen when your target is built.
 
-# juce_add_binary_data(AudioPluginData SOURCES ...)
+juce_add_binary_data(BinaryData SOURCES
+        resources/shaders/room.shader
+        resources/shaders/microphone.shader
+        resources/shaders/speaker.shader
+        resources/shaders/raytracing.shader
+        resources/models/raum001.obj
+        resources/models/ball.obj
+        resources/models/head.obj)
 
 # `target_link_libraries` links libraries and JUCE modules to other libraries or executables. Here,
 # we're linking our executable target to the `juce::juce_audio_utils` module. Inter-module
@@ -113,7 +121,7 @@ target_compile_definitions(Raumsimulation
 
 target_link_libraries(Raumsimulation
     PRIVATE
-        # AudioPluginData           # If we'd created a binary data target, we'd link to it here
+        BinaryData
         juce::juce_audio_basics
         juce::juce_audio_devices
         juce::juce_audio_formats
