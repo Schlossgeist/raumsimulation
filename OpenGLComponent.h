@@ -132,6 +132,13 @@ struct OpenGLUtils
                     vertexBuffers.add(new VertexBuffer(*s));
         }
 
+        explicit Shape(const String& fileToLoad)
+        {
+            if (shapeFile.load(fileToLoad).wasOk())
+                for (auto* s : shapeFile.shapes)
+                    vertexBuffers.add(new VertexBuffer(*s));
+        }
+
         void draw(Attributes& attributes)
         {
             using namespace ::juce::gl;
@@ -877,7 +884,8 @@ private:
                 microphoneShader.reset(newmicrophoneShader.release());
                 microphoneShader->use();
 
-                microphoneShape.reset(new OpenGLUtils::Shape(URL{"file:///C%3A/Users/Nick/Desktop/head.obj"}.getLocalFile()));
+                auto headFileStream = new MemoryInputStream(BinaryData::head_obj, BinaryData::head_objSize, true);
+                microphoneShape.reset(new OpenGLUtils::Shape(String((const char*) headFileStream->getData())));
                 attributes.reset(new OpenGLUtils::Attributes(*microphoneShader));
                 uniforms.reset(new OpenGLUtils::Uniforms(*microphoneShader));
 
@@ -901,7 +909,8 @@ private:
                 speakerShader.reset(newSpeakerShader.release());
                 speakerShader->use();
 
-                speakerShape.reset(new OpenGLUtils::Shape(URL{"file:///C%3A/Users/Nick/Desktop/ball.obj"}.getLocalFile()));
+                auto ballFileStream = new MemoryInputStream(BinaryData::ball_obj, BinaryData::ball_objSize, true);
+                speakerShape.reset(new OpenGLUtils::Shape(String((const char*) ballFileStream->getData())));
                 attributes.reset(new OpenGLUtils::Attributes(*speakerShader));
                 uniforms.reset(new OpenGLUtils::Uniforms(*speakerShader));
 
