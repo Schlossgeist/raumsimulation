@@ -86,10 +86,11 @@ struct OpenGLUtils
             projectionMatrix.reset(createUniform(shader, "projectionMatrix"));
             viewMatrix.reset(createUniform(shader, "viewMatrix"));
             lightPosition.reset(createUniform(shader, "lightPosition"));
-            bouncingNumber.reset(createUniform(shader, "bouncingNumber"));
+            positionMatrix.reset(createUniform(shader, "positionMatrix"));
+            rotationMatrix.reset(createUniform(shader, "rotationMatrix"));
         }
 
-        std::unique_ptr<OpenGLShaderProgram::Uniform> projectionMatrix, viewMatrix, lightPosition, bouncingNumber;
+        std::unique_ptr<OpenGLShaderProgram::Uniform> projectionMatrix, viewMatrix, lightPosition, positionMatrix, rotationMatrix;
 
     private:
         static OpenGLShaderProgram::Uniform* createUniform(OpenGLShaderProgram& shader,
@@ -505,6 +506,8 @@ struct OpenGLUtils
                 "\n"
                 "uniform mat4 projectionMatrix;\n"
                 "uniform mat4 viewMatrix;\n"
+                "uniform mat4 microphonePosition;\n"
+                "uniform mat4 speakerPosition;\n"
                 "\n"
                 "varying vec4 destinationColour;\n"
                 "varying vec2 textureCoordOut;\n"
@@ -569,7 +572,7 @@ public:
     Rectangle<int> bounds;
     Draggable3DOrientation draggableOrientation;
     bool doBackgroundDrawing = false;
-    float scale = 0.5f, rotationSpeed = 0.0f;
+    SmoothedValue<float, ValueSmoothingTypes::Linear> scale = 0.5f, rotationSpeed = 0.0f;
     CriticalSection mutex;
 
 private:
@@ -802,18 +805,23 @@ private:
     juce::URL objFileURL = {};
     std::unique_ptr<OpenGLShaderProgram> shader;
     std::unique_ptr<OpenGLUtils::Shape> shape;
-    std::unique_ptr<OpenGLUtils::Attributes> attributes;
-    std::unique_ptr<OpenGLUtils::Uniforms> uniforms;
+    std::unique_ptr<OpenGLShaderProgram> microphoneShader;
+    std::unique_ptr<OpenGLUtils::Shape> microphoneShape;
+    std::unique_ptr<OpenGLShaderProgram> speakerShader;
+    std::unique_ptr<OpenGLUtils::Shape> speakerShape;
+    std::shared_ptr<OpenGLUtils::Attributes> attributes;
+    std::shared_ptr<OpenGLUtils::Uniforms> uniforms;
 
     CriticalSection shaderMutex;
     String newVertexShader, newFragmentShader, statusText;
+    String newMicrophoneVertexShader, newMicrophoneFragmentShader;
+    String newSpeakerVertexShader, newSpeakerFragmentShader;
 
     void updateShader()
     {
         const ScopedLock lock(shaderMutex); // Prevent concurrent access to shader strings and status
 
-        if (newVertexShader.isNotEmpty() || newFragmentShader.isNotEmpty())
-        {
+        if (newVertexShader.isNotEmpty() || newFragmentShader.isNotEmpty()) {
             std::unique_ptr<OpenGLShaderProgram> newShader(new OpenGLShaderProgram(openGLContext));
 
             if (newShader->addVertexShader(OpenGLHelpers::translateVertexShaderToV3(newVertexShader))
@@ -841,16 +849,68 @@ private:
                 uniforms.reset(new OpenGLUtils::Uniforms(*shader));
 
                 statusText = "GLSL: v" + String(OpenGLShaderProgram::getLanguageVersion(), 2);
-            }
-            else
-            {
+            } else {
                 statusText = newShader->getLastError();
             }
-
-            triggerAsyncUpdate();
-
-            newVertexShader = {};
-            newFragmentShader = {};
         }
+
+        if (newMicrophoneVertexShader.isNotEmpty() || newMicrophoneFragmentShader.isNotEmpty()) {
+            std::unique_ptr<OpenGLShaderProgram> newmicrophoneShader(new OpenGLShaderProgram(openGLContext));
+
+            if (newmicrophoneShader->addVertexShader(OpenGLHelpers::translateVertexShaderToV3(newMicrophoneVertexShader))
+                && newmicrophoneShader->addFragmentShader(OpenGLHelpers::translateFragmentShaderToV3(newMicrophoneFragmentShader))
+                && newmicrophoneShader->link())
+            {
+                microphoneShape.reset();
+                attributes.reset();
+                uniforms.reset();
+
+                microphoneShader.reset(newmicrophoneShader.release());
+                microphoneShader->use();
+
+                microphoneShape.reset(new OpenGLUtils::Shape(URL{"file:///C%3A/Users/Nick/Desktop/head.obj"}.getLocalFile()));
+                attributes.reset(new OpenGLUtils::Attributes(*microphoneShader));
+                uniforms.reset(new OpenGLUtils::Uniforms(*microphoneShader));
+
+                statusText = "GLSL: v" + String(OpenGLShaderProgram::getLanguageVersion(), 2);
+            } else {
+                statusText = newmicrophoneShader->getLastError();
+            }
+        }
+
+        if (newSpeakerVertexShader.isNotEmpty() || newSpeakerFragmentShader.isNotEmpty()) {
+            std::unique_ptr<OpenGLShaderProgram> newSpeakerShader(new OpenGLShaderProgram(openGLContext));
+
+            if (newSpeakerShader->addVertexShader(OpenGLHelpers::translateVertexShaderToV3(newSpeakerVertexShader))
+                && newSpeakerShader->addFragmentShader(OpenGLHelpers::translateFragmentShaderToV3(newSpeakerFragmentShader))
+                && newSpeakerShader->link())
+            {
+                speakerShape.reset();
+                attributes.reset();
+                uniforms.reset();
+
+                speakerShader.reset(newSpeakerShader.release());
+                speakerShader->use();
+
+                speakerShape.reset(new OpenGLUtils::Shape(URL{"file:///C%3A/Users/Nick/Desktop/ball.obj"}.getLocalFile()));
+                attributes.reset(new OpenGLUtils::Attributes(*speakerShader));
+                uniforms.reset(new OpenGLUtils::Uniforms(*speakerShader));
+
+                statusText = "GLSL: v" + String(OpenGLShaderProgram::getLanguageVersion(), 2);
+            } else {
+                statusText = newSpeakerShader->getLastError();
+            }
+        }
+
+        triggerAsyncUpdate();
+
+        newVertexShader = {};
+        newFragmentShader = {};
+
+        newMicrophoneVertexShader = {};
+        newMicrophoneFragmentShader = {};
+
+        newSpeakerVertexShader = {};
+        newSpeakerFragmentShader = {};
     }
 };

@@ -111,32 +111,81 @@ void OpenGLComponent::renderOpenGL()
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
 
+    auto microphoneMatrix = Matrix3D<float>(1.0f, 0.0f, 0.0f, 0.0f,
+                                           0.0f, 1.0f, 0.0f, 0.0f,
+                                           0.0f, 0.0f, 1.0f, 0.0f,
+                                           0.0f, 0.0f, 0.75f, 1.0f);
+
+    auto speakerMatrix = Matrix3D<float>(1.0f, 0.0f, 0.0f, 0.0f,
+                                         0.0f, 1.0f, 0.0f, 0.0f,
+                                         0.0f, 0.0f, 1.0f, 0.0f,
+                                         0.5f, 0.5f, 0.75f, 1.0f);
+
+    glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);      // wireframe mode for room draw call
+
     shader->use();
 
-    if (uniforms->projectionMatrix.get() != nullptr)
+    if (uniforms->projectionMatrix != nullptr)
         uniforms->projectionMatrix->setMatrix4(getProjectionMatrix().mat, 1, false);
 
-    if (uniforms->viewMatrix.get() != nullptr)
+    if (uniforms->viewMatrix != nullptr)
         uniforms->viewMatrix->setMatrix4(getViewMatrix().mat, 1, false);
 
-    if (uniforms->lightPosition.get() != nullptr)
-        uniforms->lightPosition->set(-15.0f, 10.0f, 15.0f, 0.0f);
+    if (uniforms->positionMatrix != nullptr)
+        uniforms->positionMatrix->setMatrix4(Matrix3D<float>().mat, 1, false);
+
+    if (uniforms->rotationMatrix != nullptr)
+        uniforms->rotationMatrix->setMatrix4(Matrix3D<float>().mat, 1, false);
 
     shape->draw(*attributes);
+
+    glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+
+    microphoneShader->use();
+
+    if (uniforms->projectionMatrix != nullptr)
+        uniforms->projectionMatrix->setMatrix4(getProjectionMatrix().mat, 1, false);
+
+    if (uniforms->viewMatrix != nullptr)
+        uniforms->viewMatrix->setMatrix4(getViewMatrix().mat, 1, false);
+
+    if (uniforms->positionMatrix != nullptr)
+        uniforms->positionMatrix->setMatrix4(microphoneMatrix.mat, 1, false);
+
+    if (uniforms->rotationMatrix != nullptr)
+        uniforms->rotationMatrix->setMatrix4(Matrix3D<float>().mat, 1, false);
+
+    microphoneShape->draw(*attributes);
+
+    speakerShader->use();
+
+    if (uniforms->projectionMatrix != nullptr)
+        uniforms->projectionMatrix->setMatrix4(getProjectionMatrix().mat, 1, false);
+
+    if (uniforms->viewMatrix != nullptr)
+        uniforms->viewMatrix->setMatrix4(getViewMatrix().mat, 1, false);
+
+    if (uniforms->positionMatrix != nullptr)
+        uniforms->positionMatrix->setMatrix4(speakerMatrix.mat, 1 ,false);
+
+    if (uniforms->rotationMatrix != nullptr)
+        uniforms->rotationMatrix->setMatrix4(Matrix3D<float>().mat, 1, false);
+
+    speakerShape->draw(*attributes);
 
     // Reset the element buffers so child Components draw correctly
     glBindBuffer(GL_ARRAY_BUFFER, 0);
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
 
     if (!controlsOverlay->isMouseButtonDownThreadsafe())
-        rotation += (float)rotationSpeed;
+        rotation += rotationSpeed.getCurrentValue();
 }
 
 Matrix3D<float> OpenGLComponent::getProjectionMatrix() const
 {
     const ScopedLock lock(mutex);
 
-    auto w = 1.0f / (scale + 0.1f);
+    auto w = 1.0f / (scale.getCurrentValue() * 2.0f + 0.1f);
     auto h = w * bounds.toFloat().getAspectRatio(false);
 
     return Matrix3D<float>::fromFrustum(-w, w, -h, h, 4.0f, 30.0f);
@@ -149,12 +198,127 @@ Matrix3D<float> OpenGLComponent::getViewMatrix() const
     auto viewMatrix = Matrix3D<float>::fromTranslation({ 0.0f, 0.0f, -10.0f }) * draggableOrientation.getRotationMatrix();
     auto rotationMatrix = Matrix3D<float>::rotation({ 0, rotation, 0 });
 
-    return viewMatrix * rotationMatrix;
+    auto flipMatrix = Matrix3D<float>(1.0f, 0.0f, 0.0f, 0.0f,       //     Y             Z
+                                      0.0f, 0.0f, 1.0f, 0.0f,        // Z __|     =>      |__ Y
+                                      0.0f, -1.0f, 0.0f, 0.0f,      //    /             /
+                                      0.0f, 0.0f, 0.0f, 1.0f);      //   X             X
+
+    return viewMatrix * rotationMatrix * flipMatrix;
 }
 
 void OpenGLComponent::setShaderProgram(const String& vertexShader, const String& fragmentShader)
 {
     const ScopedLock lock(shaderMutex); // Prevent concurrent access to shader strings and status
-    newVertexShader = vertexShader;
-    newFragmentShader = fragmentShader;
+
+    OpenGLUtils::ShaderPreset roomPreset =
+    {
+        "Room Shader",
+
+        SHADER_DEMO_HEADER
+        "in vec4 position;\n"
+        "in vec4 sourceColour;\n"
+        "in vec2 textureCoordIn;\n"
+        "\n"
+        "uniform mat4 projectionMatrix;\n"
+        "uniform mat4 viewMatrix;\n"
+        "\n"
+        "out vec4 destinationColour;\n"
+        "out vec2 textureCoordOut;\n"
+        "\n"
+        "void main()\n"
+        "{\n"
+        "    destinationColour = sourceColour;\n"
+        "    textureCoordOut = textureCoordIn;\n"
+        "    gl_Position = projectionMatrix * viewMatrix * position;\n"
+        "}\n",
+
+        SHADER_DEMO_HEADER
+        "varying vec4 destinationColour;\n"
+        "varying vec2 textureCoordOut;\n"
+        "\n"
+        "void main()\n"
+        "{\n"
+        "   vec4 colour = vec4(0.50, 0.50, 0.50, 0.50);\n"
+        "   gl_FragColor = colour;\n"
+        "}\n"
+    };
+
+    OpenGLUtils::ShaderPreset microphonePreset =
+    {
+        "Microphone Shader",
+
+        SHADER_DEMO_HEADER
+        "in vec4 position;\n"
+        "in vec4 sourceColour;\n"
+        "in vec2 textureCoordIn;\n"
+        "\n"
+        "uniform mat4 projectionMatrix;\n"
+        "uniform mat4 viewMatrix;\n"
+        "uniform mat4 positionMatrix;\n"
+        "uniform mat4 rotationMatrix;\n"
+        "\n"
+        "out vec4 destinationColour;\n"
+        "out vec2 textureCoordOut;\n"
+        "\n"
+        "void main()\n"
+        "{\n"
+        "    destinationColour = sourceColour;\n"
+        "    textureCoordOut = textureCoordIn;\n"
+        "    gl_Position = projectionMatrix * viewMatrix * positionMatrix * position;\n"
+        "}\n",
+
+        SHADER_DEMO_HEADER
+        "out vec4 destinationColour;\n"
+        "out vec2 textureCoordOut;\n"
+        "\n"
+        "void main()\n"
+        "{\n"
+        "   vec4 colour = vec4(0.50, 0.00, 0.00, 0.75);\n"
+        "   gl_FragColor = colour;\n"
+        "}\n"
+    };
+
+    OpenGLUtils::ShaderPreset speakerPreset =
+    {
+        "Speaker Shader",
+
+        SHADER_DEMO_HEADER
+        "in vec4 position;\n"
+        "in vec4 sourceColour;\n"
+        "in vec2 textureCoordIn;\n"
+        "\n"
+        "uniform mat4 projectionMatrix;\n"
+        "uniform mat4 viewMatrix;\n"
+        "uniform mat4 positionMatrix;\n"
+        "uniform mat4 rotationMatrix;\n"
+        "\n"
+        "out vec4 destinationColour;\n"
+        "out vec2 textureCoordOut;\n"
+        "\n"
+        "void main()\n"
+        "{\n"
+        "    destinationColour = sourceColour;\n"
+        "    textureCoordOut = textureCoordIn;\n"
+        "    gl_Position = projectionMatrix * viewMatrix * positionMatrix * position;\n"
+        "}\n",
+
+        SHADER_DEMO_HEADER
+        "out vec4 destinationColour;\n"
+        "out vec2 textureCoordOut;\n"
+        "\n"
+        "void main()\n"
+        "{\n"
+        "   vec4 colour = vec4(0.00, 0.00, 0.50, 0.75);\n"
+        "   gl_FragColor = colour;\n"
+        "}\n"
+    };
+
+    newVertexShader = roomPreset.vertexShader;
+    newFragmentShader = roomPreset.fragmentShader;
+
+    newMicrophoneVertexShader = microphonePreset.vertexShader;
+    newMicrophoneFragmentShader = microphonePreset.fragmentShader;
+
+    newSpeakerVertexShader = speakerPreset.vertexShader;
+    newSpeakerFragmentShader = speakerPreset.fragmentShader;
 }
