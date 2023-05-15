@@ -88,7 +88,7 @@ public:
     };
 
     struct AbsorptionCoefficients {
-        float* absorption_coefficients = new float[6];
+        float* absorption_coefficients = new float[6]{1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f,};
 
         float& operator[](int index) const {
             if (0 <= index && index < 6) {
@@ -189,25 +189,27 @@ private:
     {
         AbsorptionCoefficients absorptionCoefficients;
 
-        while (*t != '[') {
-            t++;
-        }
-
-        t++;
-
-        for (int i = 0; i < 6; i++) {
-            float value = (float) t.getDoubleValue();
-            absorptionCoefficients[i] = value;
-
-            while (*t != '/') {
-                if (*t == ']') {
-                    break;
-                }
+        if (*t != '\0') {           // Material is not empty
+            while (*t != '[') {
                 t++;
             }
 
-            if (*t == '/') {
-                t++;
+            t++;
+
+            for (int i = 0; i < 6; i++) {
+                float value = (float) t.getDoubleValue();
+                absorptionCoefficients[i] = value;
+
+                while (*t != '/') {
+                    if (*t == ']') {
+                        break;
+                    }
+                    t++;
+                }
+
+                if (*t == '/') {
+                    t++;
+                }
             }
         }
 
