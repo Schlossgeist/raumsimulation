@@ -885,7 +885,7 @@ private:
                 microphoneShader->use();
 
                 auto headFileStream = new MemoryInputStream(BinaryData::head_obj, BinaryData::head_objSize, true);
-                microphoneShape.reset(new OpenGLUtils::Shape(String((const char*) headFileStream->getData())));
+                microphoneShape.reset(new OpenGLUtils::Shape(String(CharPointer_UTF8((const char*) headFileStream->getData()))));
                 attributes.reset(new OpenGLUtils::Attributes(*microphoneShader));
                 uniforms.reset(new OpenGLUtils::Uniforms(*microphoneShader));
 
@@ -910,7 +910,7 @@ private:
                 speakerShader->use();
 
                 auto ballFileStream = new MemoryInputStream(BinaryData::ball_obj, BinaryData::ball_objSize, true);
-                speakerShape.reset(new OpenGLUtils::Shape(String((const char*) ballFileStream->getData())));
+                speakerShape.reset(new OpenGLUtils::Shape(String(CharPointer_UTF8((const char*) ballFileStream->getData()))));
                 attributes.reset(new OpenGLUtils::Attributes(*speakerShader));
                 uniforms.reset(new OpenGLUtils::Uniforms(*speakerShader));
 

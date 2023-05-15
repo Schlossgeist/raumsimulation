@@ -247,7 +247,7 @@ String OpenGLComponent::parseShader(const MemoryInputStream& shader_stream, Shad
 {
     ShaderType currentShaderType = SHADER_NONE;
     String result;
-    StringArray lines = StringArray::fromLines(String((const char*) shader_stream.getData()));
+    StringArray lines = StringArray::fromLines(String(CharPointer_UTF8((const char*) shader_stream.getData())));
 
     for (auto lineNum = 0; lineNum < lines.size() - 1; ++lineNum) {
         auto l = lines[lineNum].getCharPointer().findEndOfWhitespace();
