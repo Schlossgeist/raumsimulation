@@ -69,6 +69,7 @@ juce_generate_juce_header(Raumsimulation)
 
 target_sources(Raumsimulation
     PRIVATE
+        CustomDatatypes.h
         DecibelSlider.h
         ImpulseResponseComponent.cpp
         ImpulseResponseComponent.h

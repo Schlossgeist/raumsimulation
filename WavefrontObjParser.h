@@ -19,7 +19,7 @@
 
 #pragma once
 
-#include <map>
+#include "CustomDatatypes.h"
 
 using namespace juce;
 //==============================================================================
@@ -54,9 +54,9 @@ public:
 
     struct Mesh
     {
-        Array<Vertex> vertices, normals;
-        Array<TextureCoord> textureCoords;
-        Array<Index> indices;
+        std::vector<Vertex> vertices, normals;
+        std::vector<TextureCoord> textureCoords;
+        std::vector<Index> indices;
     };
 
     struct Material
@@ -82,28 +82,15 @@ public:
     };
 
     struct Surface {
-        Array<Vertex> vertices;
+        std::vector<Vertex> vertices;
         Vertex normal;
-
-    };
-
-    struct AbsorptionCoefficients {
-        float* absorption_coefficients = new float[6]{1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f,};
-
-        float& operator[](int index) const {
-            if (0 <= index && index < 6) {
-                return absorption_coefficients[index];
-            } else {
-                throw std::out_of_range("You tried to access an out of range absorption coefficient. There are only 6 coefficients.");
-            }
-        }
     };
 
     struct Shape
     {
         String name;
         Mesh mesh;
-        Array<Surface> surfaces;
+        std::vector<Surface> surfaces;
         AbsorptionCoefficients absorption_coefficients;
         Material material;
     };
@@ -148,14 +135,14 @@ private:
 
             auto index = (Index) newMesh.vertices.size();
 
-            if (isPositiveAndBelow (i.vertexIndex, srcMesh.vertices.size()))
-                newMesh.vertices.add (srcMesh.vertices.getReference (i.vertexIndex));
+            if (isPositiveAndBelow(i.vertexIndex, srcMesh.vertices.size()))
+                newMesh.vertices.push_back(srcMesh.vertices.at(i.vertexIndex));
 
-            if (isPositiveAndBelow (i.normalIndex, srcMesh.normals.size()))
-                newMesh.normals.add (srcMesh.normals.getReference (i.normalIndex));
+            if (isPositiveAndBelow(i.normalIndex, srcMesh.normals.size()))
+                newMesh.normals.push_back(srcMesh.normals.at(i.normalIndex));
 
-            if (isPositiveAndBelow (i.textureIndex, srcMesh.textureCoords.size()))
-                newMesh.textureCoords.add (srcMesh.textureCoords.getReference (i.textureIndex));
+            if (isPositiveAndBelow(i.textureIndex, srcMesh.textureCoords.size()))
+                newMesh.textureCoords.push_back(srcMesh.textureCoords.at(i.textureIndex));
 
             map[i] = index;
             return index;
@@ -253,9 +240,9 @@ private:
                 i1 = i2;
                 i2 = triples.getReference (i);
 
-                newMesh.indices.add (indexMap.getIndexFor (i0, newMesh, srcMesh));
-                newMesh.indices.add (indexMap.getIndexFor (i1, newMesh, srcMesh));
-                newMesh.indices.add (indexMap.getIndexFor (i2, newMesh, srcMesh));
+                newMesh.indices.push_back(indexMap.getIndexFor (i0, newMesh, srcMesh));
+                newMesh.indices.push_back(indexMap.getIndexFor (i1, newMesh, srcMesh));
+                newMesh.indices.push_back(indexMap.getIndexFor (i2, newMesh, srcMesh));
             }
         }
 
@@ -295,11 +282,11 @@ private:
     };
 
     static Shape* parseFaceGroup (const Mesh& srcMesh,
-                                  Array<Face>& faceGroup,
+                                  std::vector<Face>& faceGroup,
                                   const Material& material,
                                   const String& name)
     {
-        if (faceGroup.size() == 0)
+        if (faceGroup.empty())
             return nullptr;
 
         std::unique_ptr<Shape> shape (new Shape());
@@ -316,10 +303,10 @@ private:
 
             for (TripleIndex index : f.triples) {
                 surface.normal = srcMesh.normals[index.normalIndex];
-                surface.vertices.add(srcMesh.vertices[index.vertexIndex]);
+                surface.vertices.push_back(srcMesh.vertices[index.vertexIndex]);
             }
 
-            shape->surfaces.add(surface);
+            shape->surfaces.push_back(surface);
         }
 
         return shape.release();
@@ -328,9 +315,9 @@ private:
     Result parseObjFile (const StringArray& lines)
     {
         Mesh mesh;
-        Array<Face> faceGroup;
+        std::vector<Face> faceGroup;
 
-        Array<Material> knownMaterials;
+        std::vector<Material> knownMaterials;
         Material lastMaterial;
         String lastName;
 
@@ -338,10 +325,10 @@ private:
         {
             auto l = lines[lineNum].getCharPointer().findEndOfWhitespace();
 
-            if (matchToken (l, "v"))    { mesh.vertices     .add (parseVertex (l));       continue; }
-            if (matchToken (l, "vn"))   { mesh.normals      .add (parseVertex (l));       continue; }
-            if (matchToken (l, "vt"))   { mesh.textureCoords.add (parseTextureCoord (l)); continue; }
-            if (matchToken (l, "f"))    { faceGroup         .add (Face (l));              continue; }
+            if (matchToken (l, "v"))    { mesh.vertices     .push_back(parseVertex(l));       continue; }
+            if (matchToken (l, "vn"))   { mesh.normals      .push_back(parseVertex(l));       continue; }
+            if (matchToken (l, "vt"))   { mesh.textureCoords.push_back(parseTextureCoord(l)); continue; }
+            if (matchToken (l, "f"))    { faceGroup         .emplace_back(l);                 continue; }   //constructs new element in-place
 
             if (matchToken (l, "usemtl"))
             {
@@ -349,9 +336,9 @@ private:
 
                 for (auto i = knownMaterials.size(); --i >= 0;)
                 {
-                    if (knownMaterials.getReference (i).name == name)
+                    if (knownMaterials.at(i).name == name)
                     {
-                        lastMaterial = knownMaterials.getReference (i);
+                        lastMaterial = knownMaterials.at(i);
                         break;
                     }
                 }
@@ -382,45 +369,45 @@ private:
         return Result::ok();
     }
 
-    Result parseMaterial (Array<Material>& materials, const String& filename)
+    Result parseMaterial (std::vector<Material>& materials, const String& filename)
     {
         jassert (sourceFile.exists());
-        auto f = sourceFile.getSiblingFile (filename);
+        auto f = sourceFile.getSiblingFile(filename);
 
-        if (! f.exists())
-            return Result::fail ("Cannot open file: " + filename);
+        if (!f.exists())
+            return Result::fail("Cannot open file: " + filename);
 
-        auto lines = StringArray::fromLines (f.loadFileAsString());
+        auto lines = StringArray::fromLines(f.loadFileAsString());
 
         materials.clear();
         Material material;
 
-        for (auto line : lines)
+        for (const auto& line : lines)
         {
             auto l = line.getCharPointer().findEndOfWhitespace();
 
-            if (matchToken (l, "newmtl"))   { materials.add (material); material.name = String (l).trim(); continue; }
+            if (matchToken (l, "newmtl"))   { materials.push_back(material); material.name = String(l).trim(); continue; }
 
             if (matchToken (l, "Ka"))       { material.ambient         = parseVertex (l); continue; }
             if (matchToken (l, "Kd"))       { material.diffuse         = parseVertex (l); continue; }
             if (matchToken (l, "Ks"))       { material.specular        = parseVertex (l); continue; }
             if (matchToken (l, "Kt"))       { material.transmittance   = parseVertex (l); continue; }
             if (matchToken (l, "Ke"))       { material.emission        = parseVertex (l); continue; }
-            if (matchToken (l, "Ni"))       { material.refractiveIndex = parseFloat (l);  continue; }
-            if (matchToken (l, "Ns"))       { material.shininess       = parseFloat (l);  continue; }
+            if (matchToken (l, "Ni"))       { material.refractiveIndex = parseFloat  (l); continue; }
+            if (matchToken (l, "Ns"))       { material.shininess       = parseFloat  (l); continue; }
 
-            if (matchToken (l, "map_Ka"))   { material.ambientTextureName  = String (l).trim(); continue; }
-            if (matchToken (l, "map_Kd"))   { material.diffuseTextureName  = String (l).trim(); continue; }
-            if (matchToken (l, "map_Ks"))   { material.specularTextureName = String (l).trim(); continue; }
-            if (matchToken (l, "map_Ns"))   { material.normalTextureName   = String (l).trim(); continue; }
+            if (matchToken (l, "map_Ka"))   { material.ambientTextureName  = String(l).trim(); continue; }
+            if (matchToken (l, "map_Kd"))   { material.diffuseTextureName  = String(l).trim(); continue; }
+            if (matchToken (l, "map_Ks"))   { material.specularTextureName = String(l).trim(); continue; }
+            if (matchToken (l, "map_Ns"))   { material.normalTextureName   = String(l).trim(); continue; }
 
-            auto tokens = StringArray::fromTokens (l, " \t", "");
+            auto tokens = StringArray::fromTokens(l, " \t", "");
 
             if (tokens.size() >= 2)
-                material.parameters.set (tokens[0].trim(), tokens[1].trim());
+                material.parameters.set(tokens[0].trim(), tokens[1].trim());
         }
 
-        materials.add (material);
+        materials.push_back(material);
         return Result::ok();
     }
 

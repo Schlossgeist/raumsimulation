@@ -174,7 +174,7 @@ struct OpenGLUtils
                 glGenBuffers(1, &indexBuffer);
                 glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, indexBuffer);
                 glBufferData(GL_ELEMENT_ARRAY_BUFFER, numIndices * (int)sizeof(juce::uint32),
-                    shape.mesh.indices.getRawDataPointer(), GL_STATIC_DRAW);
+                    shape.mesh.indices.data(), GL_STATIC_DRAW);
             }
 
             ~VertexBuffer()
@@ -210,9 +210,9 @@ struct OpenGLUtils
 
             for (int i = 0; i < mesh.vertices.size(); ++i)
             {
-                auto& v = mesh.vertices.getReference(i);
+                auto& v = mesh.vertices.at(i);
 
-                auto& n = (i < mesh.normals.size() ? mesh.normals.getReference(i)
+                auto& n = (i < mesh.normals.size() ? mesh.normals.at(i)
                     : defaultNormal);
 
                 list.add({ { scale * v.x, scale * v.y, scale * v.z, },
@@ -825,6 +825,9 @@ private:
     std::unique_ptr<OpenGLUtils::Shape> microphoneShape;
     std::unique_ptr<OpenGLShaderProgram> speakerShader;
     std::unique_ptr<OpenGLUtils::Shape> speakerShape;
+//
+//    std::unique_ptr<OpenGLShaderProgram> raytracingShader;
+//
     std::shared_ptr<OpenGLUtils::Attributes> attributes;
     std::shared_ptr<OpenGLUtils::Uniforms> uniforms;
 
@@ -832,6 +835,7 @@ private:
     String newVertexShader, newFragmentShader, statusText;
     String newMicrophoneVertexShader, newMicrophoneFragmentShader;
     String newSpeakerVertexShader, newSpeakerFragmentShader;
+//    String newRaytracingComputeShader;
 
     void updateShader()
     {
@@ -920,6 +924,27 @@ private:
             }
         }
 
+//        if (newRaytracingComputeShader.isNotEmpty()) {
+//            std::unique_ptr<OpenGLShaderProgram> newRaytracingShader(new OpenGLShaderProgram(openGLContext));
+//
+//            if (newRaytracingShader->addShader(newRaytracingComputeShader, juce::gl::GL_COMPUTE_SHADER)
+//                && newRaytracingShader->link())
+//            {
+//                attributes.reset();
+//                uniforms.reset();
+//
+//                raytracingShader.reset(newRaytracingShader.release());
+//                raytracingShader->use();
+//
+//                attributes.reset(new OpenGLUtils::Attributes(*raytracingShader));
+//                uniforms.reset(new OpenGLUtils::Uniforms(*raytracingShader));
+//
+//                statusText = "GLSL: v" + String(OpenGLShaderProgram::getLanguageVersion(), 2);
+//            } else {
+//                statusText = newRaytracingShader->getLastError();
+//            }
+//        }
+//
         triggerAsyncUpdate();
 
         newVertexShader = {};
@@ -930,5 +955,7 @@ private:
 
         newSpeakerVertexShader = {};
         newSpeakerFragmentShader = {};
+//
+//        newRaytracingComputeShader = {};
     }
 };
