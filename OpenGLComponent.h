@@ -205,8 +205,7 @@ struct OpenGLUtils
         static void createVertexListFromMesh(const WavefrontObjFile::Mesh& mesh, Array<Vertex>& list, Colour colour)
         {
             auto scale = 0.2f;
-            WavefrontObjFile::TextureCoord defaultTexCoord = { 0.5f, 0.5f };
-            WavefrontObjFile::Vertex defaultNormal = { 0.5f, 0.5f, 0.5f };
+            glm::vec3 defaultNormal = { 0.5f, 0.5f, 0.5f };
 
             for (int i = 0; i < mesh.vertices.size(); ++i)
             {
