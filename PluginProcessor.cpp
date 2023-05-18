@@ -247,3 +247,26 @@ void RaumsimulationAudioProcessor::playIR()
     irBufferPosition = 0;
     play = true;
 }
+
+/**
+ * @see https://www.recordingblogs.com/wiki/sine-sweep
+ */
+juce::AudioBuffer<float>& RaumsimulationAudioProcessor::generateLogarithmicSweep(double startFrequency, double endFrequency, float lengthS, double sampleRate, int numChannels)
+{
+    auto buffer = new juce::AudioBuffer<float>(numChannels, sampleRate*lengthS);
+
+    auto* writePtrArray = buffer->getArrayOfWritePointers();
+
+    double frequencyRatio = endFrequency / startFrequency;
+
+    for (int sample = 0; sample < buffer->getNumSamples(); sample++) {
+        for (int channel = 0; channel < buffer->getNumChannels(); channel++) {
+            writePtrArray[channel][sample] = (float) sin(2 * glm::pi<float>()
+                                                         * startFrequency
+                                                         * lengthS
+                                                         * ((pow(frequencyRatio, (sample/sampleRate)/lengthS) - 1)/log(frequencyRatio)));
+        }
+    }
+
+    return *buffer;
+}

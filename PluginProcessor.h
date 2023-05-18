@@ -61,14 +61,13 @@ public:
     void updateParameters();
     void reset() override;
     void playIR();
+    juce::AudioBuffer<float>& generateLogarithmicSweep(double startFrequency, double endFrequency, float lengthS, double sampleRate, int numChannels);
 
     juce::AudioBuffer<float> ir;
     int irBufferPosition = 0;
     bool play = false;
 
-    double globalSampleRate = 0;
-
-    Raytracer raytracer;
+    double globalSampleRate = 0.0f;
 
 private:
     //==============================================================================
