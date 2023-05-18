@@ -28,4 +28,22 @@ struct Band6Coefficients {
         }
         return *this;
     }
+
+    bool operator==(const Band6Coefficients& other) {
+        for (int index = 0; index < 6; index++) {
+            if (coefficients[index] != other[index]) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    bool operator!=(const Band6Coefficients& other) {
+        for (int index = 0; index < 6; index++) {
+            if (coefficients[index] != other[index]) {
+                return true;
+            }
+        }
+        return false;
+    }
 };
