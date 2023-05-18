@@ -18,7 +18,6 @@ struct Band6Coefficients {
 
         for (int index = 0; index < 6; index++) {
             new_coefficients[index] = (1.0f - coefficients[index]);
-            index++;
         }
         return new_coefficients;
     }
@@ -26,7 +25,6 @@ struct Band6Coefficients {
     Band6Coefficients& operator*=(const Band6Coefficients& other) {
         for (int index = 0; index < 6; index++) {
             coefficients[index] *= other[index];
-            index++;
         }
         return *this;
     }
