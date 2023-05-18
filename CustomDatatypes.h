@@ -2,30 +2,30 @@
 
 #include <stdexcept>
 
-struct AbsorptionCoefficients {
-    float* absorption_coefficients = new float[6]{1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f,};
+struct Band6Coefficients {
+    float coefficients[6]{1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f,};
 
     float& operator[](const int index) const {
         if (0 <= index && index < 6) {
-            return absorption_coefficients[index];
+            return (float&) coefficients[index];
         } else {
-            throw std::out_of_range("You tried to access an out of range absorption coefficient. There are only 6 coefficients.");
+            throw std::out_of_range("You tried to access an out of range coefficient. There are only 6 coefficients.");
         }
     }
 
-    AbsorptionCoefficients operator-() const {
-        AbsorptionCoefficients coefficients;
+    Band6Coefficients operator-() const {
+        Band6Coefficients new_coefficients;
 
         for (int index = 0; index < 6; index++) {
-            coefficients[index] = (1 - absorption_coefficients[index]);
+            new_coefficients[index] = (1.0f - coefficients[index]);
             index++;
         }
-        return coefficients;
+        return new_coefficients;
     }
 
-    AbsorptionCoefficients& operator*=(const AbsorptionCoefficients& other) {
+    Band6Coefficients& operator*=(const Band6Coefficients& other) {
         for (int index = 0; index < 6; index++) {
-            absorption_coefficients[index] *= other[index];
+            coefficients[index] *= other[index];
             index++;
         }
         return *this;

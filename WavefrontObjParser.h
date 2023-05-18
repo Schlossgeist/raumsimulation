@@ -89,7 +89,7 @@ public:
         String name;
         Mesh mesh;
         std::vector<Surface> surfaces;
-        AbsorptionCoefficients absorption_coefficients;
+        Band6Coefficients absorption_coefficients;
         Material material;
     };
 
@@ -159,9 +159,9 @@ private:
         return v;
     }
 
-    static AbsorptionCoefficients parseAbsorptionCoefficients(String::CharPointerType t)
+    static Band6Coefficients parseAbsorptionCoefficients(String::CharPointerType t)
     {
-        AbsorptionCoefficients absorptionCoefficients;
+        Band6Coefficients absorptionCoefficients;
 
         if (*t != '\0') {           // Material is not empty
             while (*t != '[') {
