@@ -4,7 +4,7 @@
 ImpulseResponseComponent::ImpulseResponseComponent(RaumsimulationAudioProcessor& p, juce::AudioProcessorValueTreeState& pts)
     : audioProcessor(p)
     , parameters(pts)
-    , thumbnail(256, formatManager, thumbnailCache)
+    , thumbnail(128, formatManager, thumbnailCache)
 {
     irFileURL = static_cast<const juce::URL>(parameters.state.getProperty("ir_file_url"));
 
@@ -20,6 +20,11 @@ ImpulseResponseComponent::ImpulseResponseComponent(RaumsimulationAudioProcessor&
     irFileLoadButton.setColour(TextButton::buttonColourId, Colour (0xff797fed));
     irFileLoadButton.setColour(TextButton::textColourOffId, Colours::black);
     irFileLoadButton.onClick = [this] { openFile(); };
+
+    addAndMakeVisible(irFileSaveButton);
+    irFileSaveButton.setColour(TextButton::buttonColourId, Colour (0xff797fed));
+    irFileSaveButton.setColour(TextButton::textColourOffId, Colours::black);
+    irFileSaveButton.onClick = [this] { saveFile(); };
 
     irFileLabel.attachToComponent(&irFileLoadButton, false);
     irFileLabel.setText(irFileURL.toString(false), sendNotificationAsync);
@@ -64,7 +69,8 @@ void ImpulseResponseComponent::resized()
 
     playPauseButton.setBounds(buttons.removeFromLeft(100));
     buttons.removeFromLeft(5);      // little space between buttons
-    irFileLoadButton.setBounds(buttons);
+    irFileLoadButton.setBounds(buttons.removeFromLeft(buttons.getWidth()/2));
+    irFileSaveButton.setBounds(buttons);
     irSizeLabel.setBounds(bottom.removeFromRight(100));
 }
 
@@ -118,6 +124,42 @@ void ImpulseResponseComponent::openFile()
 
                     setURL(result);
                     audioProcessor.updateParameters();
+                }
+
+                irFileChooser = nullptr;
+            }, nullptr);
+}
+
+void ImpulseResponseComponent::saveFile()
+{
+    if (irFileChooser != nullptr)
+        return;
+
+    irFileChooser.reset(new FileChooser("Select an audio file...", File(), "*.wav"));
+
+    irFileChooser->launchAsync(FileBrowserComponent::saveMode | FileBrowserComponent::warnAboutOverwriting,
+            [this] (const FileChooser& fc) mutable
+            {
+                if (fc.getURLResults().size() > 0)
+                {
+                    auto result = fc.getURLResult();
+
+                    auto file = File(result.getLocalFile().getFullPathName());
+
+                    if (file.exists()) {
+                        file.moveToTrash();
+                    }
+
+                    WavAudioFormat format;
+                    std::unique_ptr<AudioFormatWriter> writer;
+                    writer.reset(format.createWriterFor(new FileOutputStream (file),
+                                                        audioProcessor.globalSampleRate,
+                                                        audioProcessor.ir.getNumChannels(),
+                                                        24,
+                                                        {},
+                                                        0));
+                    if (writer != nullptr)
+                        writer->writeFromAudioSampleBuffer (audioProcessor.ir, 0, audioProcessor.ir.getNumSamples());
                 }
 
                 irFileChooser = nullptr;
