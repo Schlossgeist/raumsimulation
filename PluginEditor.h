@@ -13,6 +13,7 @@
 #include "PluginProcessor.h"
 #include "OpenGLComponent.h"
 #include "ImpulseResponseComponent.h"
+#include "Raytracer.h"
 
 //==============================================================================
 /**
@@ -40,6 +41,10 @@ private:
 
     OpenGLComponent openGLComponent;
     ImpulseResponseComponent impulseResponseComponent;
+
+    TextButton generateIRButton = {"Generate Impulse Response", {}};
+    TextButton generateLSButton = {"Generate Logarithmic Sweep", {}};
+    Raytracer raytracer;
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (RaumsimulationAudioProcessorEditor)
 };

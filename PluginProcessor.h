@@ -9,7 +9,8 @@
 #pragma once
 
 #include <JuceHeader.h>
-#include "Raytracer.h"
+#include "externals/glm/glm/glm.hpp"
+#include "externals/glm/glm/ext.hpp"
 
 //==============================================================================
 /**
