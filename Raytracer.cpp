@@ -64,7 +64,7 @@ Raytracer::Reflection Raytracer::trace(Raytracer::Ray ray)
             reflection.delayMS += hit.distance / speedOfSoundMpS * 1000.0f;
 
             if (hit.surface == Hit::WALL) {
-                reflection.energy_coefficients *= -hit.absorption_coefficients;
+                reflection.energy_coefficients *= -hit.materialProperties.absorptionCoefficients;
 
                 ray.position = hit.hitPoint;
 
@@ -77,7 +77,7 @@ Raytracer::Reflection Raytracer::trace(Raytracer::Ray ray)
                     // reflection would not be in the same hemisphere, so invert it
                     diffuseReflection *= -1;
                 }
-                ray.direction = normalize(mix(specularReflection, diffuseReflection, 0.5f));
+                ray.direction = normalize(mix(specularReflection, diffuseReflection, hit.materialProperties.roughness));
             } else {
                 reflection.didHit = true;
 
@@ -118,7 +118,7 @@ Raytracer::Hit Raytracer::calculateBounce(Ray ray)
             Hit triangleHit = collisionTriangle(ray, triangle);
 
             if (triangleHit.surface && triangleHit.distance < hit.distance) {
-                triangleHit.absorption_coefficients = shape->absorption_coefficients;
+                triangleHit.materialProperties = shape->materialProperties;
                 hit = triangleHit;
             }
         }

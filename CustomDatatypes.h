@@ -47,3 +47,8 @@ struct Band6Coefficients {
         return false;
     }
 };
+
+struct MaterialProperties {
+    Band6Coefficients absorptionCoefficients;
+    float roughness = 0.0f;
+};

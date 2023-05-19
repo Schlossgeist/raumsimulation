@@ -54,7 +54,7 @@ public:
         float distance = 1000000.0f;
         glm::vec3 hitPoint;
         glm::vec3 normal;
-        Band6Coefficients absorption_coefficients;
+        MaterialProperties materialProperties;
     };
 
     struct Reflection {
