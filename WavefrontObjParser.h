@@ -89,7 +89,7 @@ public:
         String name;
         Mesh mesh;
         std::vector<Surface> surfaces;
-        Band6Coefficients absorption_coefficients;
+        MaterialProperties materialProperties;
         Material material;
     };
 
@@ -159,11 +159,14 @@ private:
         return v;
     }
 
-    static Band6Coefficients parseAbsorptionCoefficients(String::CharPointerType t)
+    static MaterialProperties parseMaterialProperties(String::CharPointerType t)
     {
         Band6Coefficients absorptionCoefficients;
+        float roughness = 0.0f;
 
         if (*t != '\0') {           // Material is not empty
+
+            // parse absorption coefficients
             while (*t != '[') {
                 t++;
             }
@@ -185,9 +188,17 @@ private:
                     t++;
                 }
             }
+
+            // parse roughness value
+            while (*t != '(') {
+                t++;
+            }
+
+            t++;
+            roughness = (float) t.getDoubleValue();
         }
 
-        return absorptionCoefficients;
+        return MaterialProperties{absorptionCoefficients, roughness};
     }
 
     static bool matchToken(String::CharPointerType& t, const char* token)
@@ -279,7 +290,7 @@ private:
         std::unique_ptr<Shape> shape (new Shape());
         shape->name = name;
         shape->material = material;
-        shape->absorption_coefficients = parseAbsorptionCoefficients(material.name.getCharPointer());
+        shape->materialProperties = parseMaterialProperties(material.name.getCharPointer());
 
         IndexMap indexMap;
 
