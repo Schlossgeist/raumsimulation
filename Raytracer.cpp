@@ -90,15 +90,6 @@ Raytracer::Hit Raytracer::calculateBounce(Ray ray, Reflection reflection)
 {
     Hit hit;
 
-    for (Microphone& microphone : microphones) {
-        Hit sphereHit = collisionSphere(ray, microphone.position, 0.5f);
-
-        if (sphereHit.surface && sphereHit.distance < hit.distance && microphone.active) {
-            reflection.delayMS += sphereHit.distance / speedOfSoundMpS * 1000.0f;
-            microphone.registeredReflections.push_back(reflection);
-        }
-    }
-
     for (WavefrontObjFile::Shape* shape : room.shapes) {
 
         jassert(shape->mesh.indices.size() % 3 == 0);
@@ -117,6 +108,15 @@ Raytracer::Hit Raytracer::calculateBounce(Ray ray, Reflection reflection)
                 triangleHit.materialProperties = shape->materialProperties;
                 hit = triangleHit;
             }
+        }
+    }
+
+    for (Microphone& microphone : microphones) {
+        Hit sphereHit = collisionSphere(ray, microphone.position, 0.5f);
+
+        if (sphereHit.surface && sphereHit.distance < hit.distance && microphone.active) {
+            reflection.delayMS += sphereHit.distance / speedOfSoundMpS * 1000.0f;
+            microphone.registeredReflections.push_back(reflection);
         }
     }
 
