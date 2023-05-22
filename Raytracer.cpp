@@ -65,7 +65,6 @@ void Raytracer::trace(Raytracer::Ray ray)
 
         if (hit.surface) {
             reflection.delayMS += hit.distance / speedOfSoundMpS * 1000.0f;
-
             reflection.energy_coefficients *= -hit.materialProperties.absorptionCoefficients;
 
             ray.position = hit.hitPoint;
@@ -80,6 +79,21 @@ void Raytracer::trace(Raytracer::Ray ray)
                 diffuseReflection *= -1;
             }
             ray.direction = normalize(mix(specularReflection, diffuseReflection, hit.materialProperties.roughness));
+
+            // calculate scattered energy portion
+            for (const Microphone& microphone : microphones) {
+                Ray scatteredRay = {
+                        hit.hitPoint,
+                        hit.hitPoint - microphone.position
+                };
+
+                Reflection scatteredReflection = {
+                        reflection.energy_coefficients *= fractionOccupiedBySphere(glm::length(scatteredRay.direction), 0.5f),
+                        reflection.delayMS
+                };
+
+                Hit scatteredHit = calculateBounce(scatteredRay, scatteredReflection);
+            }
         } else {
             break;
         }
@@ -217,4 +231,17 @@ Raytracer::Hit Raytracer::collisionTriangle(Raytracer::Ray ray, Raytracer::Trian
     }
 
     return hit;
+}
+
+/**
+ * @see https://gamedev.stackexchange.com/a/75775
+ */
+float Raytracer::fractionOccupiedBySphere(float distance, float receiverRadius)
+{
+    float totalAreaOfHalfSphere = 4 * glm::pi<float>() * distance * distance / 2;
+
+    float h                = 1.0f - receiverRadius * receiverRadius / 2 * distance * distance;
+    float intersectionArea = sqrt(distance * distance * (1.0f - h * h));
+
+    return intersectionArea / totalAreaOfHalfSphere;
 }

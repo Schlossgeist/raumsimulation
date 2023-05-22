@@ -89,4 +89,5 @@ private:
 
     static Hit collisionSphere(Ray ray, glm::vec3 position, float radius);
     static Hit collisionTriangle(Ray ray, Triangle triangle);
+    static float fractionOccupiedBySphere(float distance, float receiverRadius);
 };
