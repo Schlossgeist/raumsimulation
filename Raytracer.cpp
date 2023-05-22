@@ -5,11 +5,11 @@ Raytracer::Raytracer(RaumsimulationAudioProcessor& p, juce::AudioProcessorValueT
     , parameters(pts)
     , ThreadWithProgressWindow(windowTitle, hasProgressBar, hasCancelButton, timeOutMsWhenCancelling, cancelButtonText, componentToCentreAround)
 {
-    microphones.add(Microphone{true, glm::vec3{2.5f, 3.5f, 2.0f}});
-    speakers.add(Speaker{true, glm::vec3{7.0f, -1.0f, 3.0f}});
+    microphones.push_back(Microphone{true, glm::vec3{2.5f, 3.5f, 2.0f}});
+    speakers.push_back(Speaker{true, glm::vec3{7.0f, -1.0f, 3.0f}});
 
-    //microphones.add(Microphone{true, glm::vec3{1.0f, 0.5f, 2.0f}});
-    //speakers.add(Speaker{true, glm::vec3{3.0f, 1.0f, 3.0f}});
+    //microphones.push_back(Microphone{true, glm::vec3{1.0f, 0.5f, 2.0f}});
+    //speakers.push_back(Speaker{true, glm::vec3{3.0f, 1.0f, 3.0f}});
 }
 
 void Raytracer::setRoom(const File& objFile)
@@ -27,79 +27,75 @@ void Raytracer::run()
 
     setStatusMessage("Casting rays...");
 
-    for (int rayNum = 0; rayNum < raysPerMicrophone; rayNum++) {
-
+    for (int speakerNum = 0; speakerNum < speakers.size(); speakerNum++) {
         // user pressed "cancel"
         if (threadShouldExit())
             break;
 
-        // generate Ray at microphone position with random direction
-        Ray randomRay = {
-                microphones[0].position,
-                glm::normalize(glm::vec3{randomNormalDistribution(), randomNormalDistribution(), randomNormalDistribution()})
-        };
+        setStatusMessage("Casting Rays for source " + String(speakerNum + 1) + " / " + String(speakers.size()));
 
-        Reflection reflection = trace(randomRay);
+        for (int rayNum = 0; rayNum < raysPerSource; rayNum++) {
+            // user pressed "cancel"
+            if (threadShouldExit())
+                break;
 
-        if (reflection.didHit) {
-            reflections.push_back(reflection);
+            // generate Ray at speaker position with random direction
+            Ray randomRay = {
+                    speakers[speakerNum].position,
+                    glm::normalize(glm::vec3{randomNormalDistribution(), randomNormalDistribution(), randomNormalDistribution()})
+            };
+
+            trace(randomRay);
+
+            // update the progress bar on the dialog box
+            setProgress((float) ((speakerNum + 1) * (rayNum + 1)) / (float) (speakers.size() * raysPerSource));
         }
-
-        // update the progress bar on the dialog box
-        setProgress ((float) rayNum / (float) raysPerMicrophone);
     }
 
     setStatusMessage("Generating impulse response...");
     sleep(1000);
 }
 
-Raytracer::Reflection Raytracer::trace(Raytracer::Ray ray)
+void Raytracer::trace(Raytracer::Ray ray)
 {
     Reflection reflection;
 
     for (int bounce = 0; bounce < maxBounces; bounce++) {
-        Hit hit = calculateBounce(ray);
+        Hit hit = calculateBounce(ray, reflection);
 
         if (hit.surface) {
             reflection.delayMS += hit.distance / speedOfSoundMpS * 1000.0f;
 
-            if (hit.surface == Hit::WALL) {
-                reflection.energy_coefficients *= -hit.materialProperties.absorptionCoefficients;
+            reflection.energy_coefficients *= -hit.materialProperties.absorptionCoefficients;
 
-                ray.position = hit.hitPoint;
+            ray.position = hit.hitPoint;
 
-                // calculate diffuse and specular portion of reflection
-                glm::vec3 specularReflection = reflect(ray.direction, hit.normal);
-                glm::vec3 diffuseReflection = glm::normalize(glm::vec3{randomNormalDistribution(), randomNormalDistribution(), randomNormalDistribution()});
+            // calculate diffuse and specular portion of reflection
+            glm::vec3 specularReflection = reflect(ray.direction, hit.normal);
+            glm::vec3 diffuseReflection = glm::normalize(glm::vec3{randomNormalDistribution(), randomNormalDistribution(), randomNormalDistribution()});
 
-                // dot product of normal and vector is negative if the angle between them is greater than 90 degrees
-                if (dot(hit.normal, diffuseReflection) < 0) {
-                    // reflection would not be in the same hemisphere, so invert it
-                    diffuseReflection *= -1;
-                }
-                ray.direction = normalize(mix(specularReflection, diffuseReflection, hit.materialProperties.roughness));
-            } else {
-                reflection.didHit = true;
-
-                return reflection;
+            // dot product of normal and vector is negative if the angle between them is greater than 90 degrees
+            if (dot(hit.normal, diffuseReflection) < 0) {
+                // reflection would not be in the same hemisphere, so invert it
+                diffuseReflection *= -1;
             }
+            ray.direction = normalize(mix(specularReflection, diffuseReflection, hit.materialProperties.roughness));
         } else {
             break;
         }
     }
-
-    return reflection;
 }
 
-Raytracer::Hit Raytracer::calculateBounce(Ray ray)
+Raytracer::Hit Raytracer::calculateBounce(Ray ray, Reflection reflection)
 {
     Hit hit;
 
-    for (Speaker speaker : speakers) {
-        Hit sphereHit = collisionSphere(ray, speaker.position, 0.5f);
+    for (Microphone& microphone : microphones) {
+        Hit sphereHit = collisionSphere(ray, microphone.position, 0.5f);
 
-        if (sphereHit.surface && sphereHit.distance < hit.distance && speaker.active) {
-            hit = sphereHit;
+        if (sphereHit.surface && sphereHit.distance < hit.distance && microphone.active) {
+            reflection.delayMS += sphereHit.distance / speedOfSoundMpS * 1000.0f;
+            microphone.registeredReflections.push_back(reflection);
         }
     }
 
@@ -160,7 +156,7 @@ Raytracer::Hit Raytracer::collisionSphere(Raytracer::Ray ray, glm::vec3 center, 
         float distance = -p/2 - sqrt(radicand);                     // only calculate nearest intersection
 
         if (distance >= 0) {                                            // ignore intersections behind the ray
-            hit.surface = Hit::SPEAKER;
+            hit.surface = Hit::RECEIVER;
             hit.distance = distance;
             hit.hitPoint = ray.position + (ray.direction * distance);   // move direction to origin and scale by distance
             hit.normal = normalize(hit.hitPoint - center);

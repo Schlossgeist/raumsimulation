@@ -12,6 +12,25 @@ class Raytracer : public juce::ThreadWithProgressWindow
 public:
     Raytracer(RaumsimulationAudioProcessor&, juce::AudioProcessorValueTreeState&, const String &windowTitle, bool hasProgressBar, bool hasCancelButton, int timeOutMsWhenCancelling, const String &cancelButtonText, Component *componentToCentreAround);
 
+    struct Hit {
+        enum SurfaceType {
+            NONE = 0,
+            WALL = 1,
+            RECEIVER = 2
+        };
+
+        SurfaceType surface = NONE;
+        float distance = 1000000.0f;
+        glm::vec3 hitPoint;
+        glm::vec3 normal;
+        MaterialProperties materialProperties;
+    };
+
+    struct Reflection {
+        Band6Coefficients energy_coefficients;
+        float delayMS = 0.0f;
+    };
+
     struct Directivity {
         enum Pattern {
             OMNIDIRECTIONAL
@@ -25,6 +44,7 @@ public:
         bool active = false;
         glm::vec3 position = {0.0, 0.0, 0.0};
         Directivity directivity;
+        std::vector<Reflection> registeredReflections;
     };
 
     struct Speaker {
@@ -35,32 +55,12 @@ public:
     };
 
     const int maxBounces = 10;
-    const int raysPerMicrophone = 100000;
+    const int raysPerSource = 10000;
     const float speedOfSoundMpS = 343.0f;
 
     struct Ray {
         glm::vec3 position;
         glm::vec3 direction;
-    };
-
-    struct Hit {
-        enum SurfaceType {
-            NONE = 0,
-            WALL = 1,
-            SPEAKER = 2
-        };
-
-        SurfaceType surface = NONE;
-        float distance = 1000000.0f;
-        glm::vec3 hitPoint;
-        glm::vec3 normal;
-        MaterialProperties materialProperties;
-    };
-
-    struct Reflection {
-        bool didHit = false;
-        Band6Coefficients energy_coefficients;
-        float delayMS = 0.0f;
     };
 
     struct Triangle {
@@ -71,8 +71,8 @@ public:
     void run() override;
     void setRoom(const File& objFile);
 
-    Array<Microphone> microphones;
-    Array<Speaker> speakers;
+    std::vector<Microphone> microphones;
+    std::vector<Speaker> speakers;
 
 private:
 
@@ -84,10 +84,8 @@ private:
     juce::Random randomGenerator;
     float randomNormalDistribution();
 
-    std::vector<Reflection> reflections;
-
-    Reflection trace(Ray ray);
-    Hit calculateBounce(Ray ray);
+    void trace(Ray ray);
+    Hit calculateBounce(Ray ray, Reflection reflection);
 
     static Hit collisionSphere(Ray ray, glm::vec3 position, float radius);
     static Hit collisionTriangle(Ray ray, Triangle triangle);
