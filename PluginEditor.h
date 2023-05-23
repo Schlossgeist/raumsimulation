@@ -29,8 +29,12 @@ public:
     void resized() override;
 
 private:
-    // This reference is provided as a quick way for your editor to
-    // access the processor object that created it.
+    void addObject();
+    void removeObject();
+    void populateObjectMenu();
+    void populateObjectProperties();
+    void updateObjectProperties();
+
     RaumsimulationAudioProcessor& audioProcessor;
 
     juce::AudioProcessorValueTreeState& parameterTreeState;
@@ -44,6 +48,29 @@ private:
 
     TextButton generateIRButton = {"Generate Impulse Response", {}};
     TextButton generateLSButton = {"Generate Logarithmic Sweep", {}};
+
+    TextButton addObjectButton = {"Create", {}};
+    TextButton removeObjectButton = {"Remove", {}};
+    ComboBox objectMenu;
+
+    juce::Label activeToggleLabel{{}, "Active"};
+    ToggleButton activeToggle;
+    ComboBox typeMenu;
+
+    juce::Label xPositionLabel{{}, "X Position"};
+    Slider      xPositionSlider;
+    juce::Label yPositionLabel{{}, "Y Position"};
+    Slider      yPositionSlider;
+    juce::Label zPositionLabel{{}, "Z Position"};
+    Slider      zPositionSlider;
+
+    juce::Label xRotationLabel{{}, "X Rotation"};
+    Slider      xRotationSlider;
+    juce::Label yRotationLabel{{}, "Y Rotation"};
+    Slider      yRotationSlider;
+    juce::Label zRotationLabel{{}, "Z Rotation"};
+    Slider      zRotationSlider;
+
     Raytracer raytracer;
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (RaumsimulationAudioProcessorEditor)

@@ -8,8 +8,11 @@ Raytracer::Raytracer(RaumsimulationAudioProcessor& p, juce::AudioProcessorValueT
     microphones.push_back(Microphone{true, glm::vec3{2.5f, 3.5f, 2.0f}});
     speakers.push_back(Speaker{true, glm::vec3{7.0f, -1.0f, 3.0f}});
 
-    //microphones.push_back(Microphone{true, glm::vec3{1.0f, 0.5f, 2.0f}});
-    //speakers.push_back(Speaker{true, glm::vec3{3.0f, 1.0f, 3.0f}});
+    objects.insert(std::pair{String("Mic1"), Object{Object::Type::MICROPHONE, true, glm::vec3{2.5f, 3.5f, 2.0f}}});
+    objects.insert(std::pair{String("Spk1"), Object{Object::Type::SPEAKER, true, glm::vec3{7.0f, -1.0f, 3.0f}}});
+
+    objects.insert(std::pair{String("Mic2"), Object{Object::Type::MICROPHONE, false, glm::vec3{0.5f, 0.5f, 2.0f}}});
+    objects.insert(std::pair{String("Spk2"), Object{Object::Type::SPEAKER, false, glm::vec3{3.0f, 1.0f, 3.0f}}});
 }
 
 void Raytracer::setRoom(const File& objFile)

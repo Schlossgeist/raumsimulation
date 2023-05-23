@@ -31,9 +31,10 @@
 #include "OpenGLComponent.h"
 
 //==============================================================================
-OpenGLComponent::OpenGLComponent(RaumsimulationAudioProcessor& p, juce::AudioProcessorValueTreeState& pts)
+OpenGLComponent::OpenGLComponent(RaumsimulationAudioProcessor& p, juce::AudioProcessorValueTreeState& pts, Raytracer& r)
     : audioProcessor(p)
     , parameters(pts)
+    , raytracer(r)
 {
     objFileURL = static_cast<const juce::URL>(parameters.state.getProperty("obj_file_url"));
 
@@ -111,16 +112,6 @@ void OpenGLComponent::renderOpenGL()
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
 
-    auto microphoneMatrix = Matrix3D<float>(1.0f, 0.0f, 0.0f, 0.0f,
-                                           0.0f, 1.0f, 0.0f, 0.0f,
-                                           0.0f, 0.0f, 1.0f, 0.0f,
-                                           0.0f, 0.0f, 0.75f, 1.0f);
-
-    auto speakerMatrix = Matrix3D<float>(1.0f, 0.0f, 0.0f, 0.0f,
-                                         0.0f, 1.0f, 0.0f, 0.0f,
-                                         0.0f, 0.0f, 1.0f, 0.0f,
-                                         0.5f, 0.5f, 0.75f, 1.0f);
-
     glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);      // wireframe mode for room draw call
 
     shader->use();
@@ -141,37 +132,58 @@ void OpenGLComponent::renderOpenGL()
 
     glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
 
-    microphoneShader->use();
+    for (const auto& objectPair : raytracer.objects) {
+        auto microphone = objectPair.second;
+        if (microphone.type == Raytracer::Object::MICROPHONE && microphone.active) {
+            auto microphoneMatrix = Matrix3D<float>(1.0f, 0.0f, 0.0f, 0.0f,
+                                                    0.0f, 1.0f, 0.0f, 0.0f,
+                                                    0.0f, 0.0f, 1.0f, 0.0f,
+                                                    microphone.position.x, microphone.position.y, microphone.position.z, 1.0f);
 
-    if (uniforms->projectionMatrix != nullptr)
-        uniforms->projectionMatrix->setMatrix4(getProjectionMatrix().mat, 1, false);
+            microphoneShader->use();
 
-    if (uniforms->viewMatrix != nullptr)
-        uniforms->viewMatrix->setMatrix4(getViewMatrix().mat, 1, false);
+            if (uniforms->projectionMatrix != nullptr)
+                uniforms->projectionMatrix->setMatrix4(getProjectionMatrix().mat, 1, false);
 
-    if (uniforms->positionMatrix != nullptr)
-        uniforms->positionMatrix->setMatrix4(microphoneMatrix.mat, 1, false);
+            if (uniforms->viewMatrix != nullptr)
+                uniforms->viewMatrix->setMatrix4(getViewMatrix().mat, 1, false);
 
-    if (uniforms->rotationMatrix != nullptr)
-        uniforms->rotationMatrix->setMatrix4(Matrix3D<float>().mat, 1, false);
+            if (uniforms->positionMatrix != nullptr)
+                uniforms->positionMatrix->setMatrix4(microphoneMatrix.mat, 1, false);
 
-    microphoneShape->draw(*attributes);
+            if (uniforms->rotationMatrix != nullptr)
+                uniforms->rotationMatrix->setMatrix4(Matrix3D<float>().mat, 1, false);
 
-    speakerShader->use();
+            microphoneShape->draw(*attributes);
+        }
+    }
 
-    if (uniforms->projectionMatrix != nullptr)
-        uniforms->projectionMatrix->setMatrix4(getProjectionMatrix().mat, 1, false);
 
-    if (uniforms->viewMatrix != nullptr)
-        uniforms->viewMatrix->setMatrix4(getViewMatrix().mat, 1, false);
+    for (const auto& objectPair : raytracer.objects) {
+        auto speaker = objectPair.second;
+        if (speaker.type == Raytracer::Object::SPEAKER && speaker.active) {
+            auto speakerMatrix = Matrix3D<float>(1.0f, 0.0f, 0.0f, 0.0f,
+                                                    0.0f, 1.0f, 0.0f, 0.0f,
+                                                    0.0f, 0.0f, 1.0f, 0.0f,
+                                                 speaker.position.x, speaker.position.y, speaker.position.z, 1.0f);
 
-    if (uniforms->positionMatrix != nullptr)
-        uniforms->positionMatrix->setMatrix4(speakerMatrix.mat, 1 ,false);
+            speakerShader->use();
 
-    if (uniforms->rotationMatrix != nullptr)
-        uniforms->rotationMatrix->setMatrix4(Matrix3D<float>().mat, 1, false);
+            if (uniforms->projectionMatrix != nullptr)
+                uniforms->projectionMatrix->setMatrix4(getProjectionMatrix().mat, 1, false);
 
-    speakerShape->draw(*attributes);
+            if (uniforms->viewMatrix != nullptr)
+                uniforms->viewMatrix->setMatrix4(getViewMatrix().mat, 1, false);
+
+            if (uniforms->positionMatrix != nullptr)
+                uniforms->positionMatrix->setMatrix4(speakerMatrix.mat, 1 ,false);
+
+            if (uniforms->rotationMatrix != nullptr)
+                uniforms->rotationMatrix->setMatrix4(Matrix3D<float>().mat, 1, false);
+
+            speakerShape->draw(*attributes);
+        }
+    }
 
     // Reset the element buffers so child Components draw correctly
     glBindBuffer(GL_ARRAY_BUFFER, 0);
@@ -185,17 +197,17 @@ Matrix3D<float> OpenGLComponent::getProjectionMatrix() const
 {
     const ScopedLock lock(mutex);
 
-    auto w = 1.0f / (scale.getCurrentValue() * 2.0f + 0.1f);
+    auto w = 1.0f / (scale.getCurrentValue() + 0.1f);
     auto h = w * bounds.toFloat().getAspectRatio(false);
 
-    return Matrix3D<float>::fromFrustum(-w, w, -h, h, 4.0f, 30.0f);
+    return Matrix3D<float>::fromFrustum(-w, w, -h, h, 5.0f, 50.0f);
 }
 
 Matrix3D<float> OpenGLComponent::getViewMatrix() const
 {
     const ScopedLock lock(mutex);
 
-    auto viewMatrix = Matrix3D<float>::fromTranslation({ 0.0f, 0.0f, -10.0f }) * draggableOrientation.getRotationMatrix();
+    auto viewMatrix = Matrix3D<float>::fromTranslation({ 0.0f, 0.0f, -25.0f }) * draggableOrientation.getRotationMatrix();
     auto rotationMatrix = Matrix3D<float>::rotation({ 0, rotation, 0 });
 
     auto flipMatrix = Matrix3D<float>(1.0f, 0.0f, 0.0f, 0.0f,       //     Y             Z

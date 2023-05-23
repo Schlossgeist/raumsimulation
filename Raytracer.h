@@ -54,6 +54,17 @@ public:
         double power = 10.0;
     };
 
+    struct Object {
+        enum Type {
+            MICROPHONE = 1,
+            SPEAKER = 2
+        };
+
+        Type type;
+        bool active = false;
+        glm::vec3 position = {0.0f, 0.0f, 0.0f};
+    };
+
     const int maxBounces = 10;
     const int raysPerSource = 10000;
     const float speedOfSoundMpS = 343.0f;
@@ -73,6 +84,7 @@ public:
 
     std::vector<Microphone> microphones;
     std::vector<Speaker> speakers;
+    std::map<String, Object> objects;
 
 private:
 

@@ -1,8 +1,9 @@
 #pragma once
 
-#include <JuceHeader.h>
 #include "PluginProcessor.h"
+#include "Raytracer.h"
 #include "WavefrontObjParser.h"
+#include <JuceHeader.h>
 
 struct OpenGLUtils
 {
@@ -204,7 +205,7 @@ struct OpenGLUtils
 
         static void createVertexListFromMesh(const WavefrontObjFile::Mesh& mesh, Array<Vertex>& list, Colour colour)
         {
-            auto scale = 0.2f;
+            auto scale = 1.0f;
             glm::vec3 defaultNormal = { 0.5f, 0.5f, 0.5f };
 
             for (int i = 0; i < mesh.vertices.size(); ++i)
@@ -559,7 +560,7 @@ class OpenGLComponent: public juce::Component,
                        private juce::AsyncUpdater
 {
 public:
-    OpenGLComponent(RaumsimulationAudioProcessor&, juce::AudioProcessorValueTreeState&);
+    OpenGLComponent(RaumsimulationAudioProcessor&, juce::AudioProcessorValueTreeState&, Raytracer&);
     ~OpenGLComponent() override;
 
     void paint (juce::Graphics&) override;
@@ -603,6 +604,7 @@ private:
 
     RaumsimulationAudioProcessor& audioProcessor;
     juce::AudioProcessorValueTreeState& parameters;
+    Raytracer& raytracer;
 
     //==============================================================================
     /**
@@ -822,9 +824,6 @@ private:
     std::unique_ptr<OpenGLUtils::Shape> microphoneShape;
     std::unique_ptr<OpenGLShaderProgram> speakerShader;
     std::unique_ptr<OpenGLUtils::Shape> speakerShape;
-//
-//    std::unique_ptr<OpenGLShaderProgram> raytracingShader;
-//
     std::shared_ptr<OpenGLUtils::Attributes> attributes;
     std::shared_ptr<OpenGLUtils::Uniforms> uniforms;
 
@@ -832,7 +831,6 @@ private:
     String newVertexShader, newFragmentShader, statusText;
     String newMicrophoneVertexShader, newMicrophoneFragmentShader;
     String newSpeakerVertexShader, newSpeakerFragmentShader;
-//    String newRaytracingComputeShader;
 
     void updateShader()
     {
@@ -921,27 +919,6 @@ private:
             }
         }
 
-//        if (newRaytracingComputeShader.isNotEmpty()) {
-//            std::unique_ptr<OpenGLShaderProgram> newRaytracingShader(new OpenGLShaderProgram(openGLContext));
-//
-//            if (newRaytracingShader->addShader(newRaytracingComputeShader, juce::gl::GL_COMPUTE_SHADER)
-//                && newRaytracingShader->link())
-//            {
-//                attributes.reset();
-//                uniforms.reset();
-//
-//                raytracingShader.reset(newRaytracingShader.release());
-//                raytracingShader->use();
-//
-//                attributes.reset(new OpenGLUtils::Attributes(*raytracingShader));
-//                uniforms.reset(new OpenGLUtils::Uniforms(*raytracingShader));
-//
-//                statusText = "GLSL: v" + String(OpenGLShaderProgram::getLanguageVersion(), 2);
-//            } else {
-//                statusText = newRaytracingShader->getLastError();
-//            }
-//        }
-//
         triggerAsyncUpdate();
 
         newVertexShader = {};
@@ -952,7 +929,5 @@ private:
 
         newSpeakerVertexShader = {};
         newSpeakerFragmentShader = {};
-//
-//        newRaytracingComputeShader = {};
     }
 };
