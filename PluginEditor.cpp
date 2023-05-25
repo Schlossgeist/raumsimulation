@@ -159,43 +159,52 @@ void RaumsimulationAudioProcessorEditor::addObject()
 
 void RaumsimulationAudioProcessorEditor::removeObject()
 {
-    raytracer.objects.erase(objectMenu.getText());
-    objectMenu.clear();
+    for (int objectNum = 0; objectNum < raytracer.objects.size(); objectNum++) {
+        if (raytracer.objects[objectNum].name == objectMenu.getText()) {
+            raytracer.objects.erase(raytracer.objects.begin() + objectNum);
+        }
+    }
+
     populateObjectMenu();
 }
 
 void RaumsimulationAudioProcessorEditor::populateObjectMenu()
 {
-    // index 0 in combobox indicates no selection
+    objectMenu.clear();
+
     for (auto& object : raytracer.objects) {
-        objectMenu.addItem(object.first, objectMenu.getNumItems() + 1);
+        objectMenu.addItem(object.name, objectMenu.getNumItems() + 1);
     }
 }
 
 void RaumsimulationAudioProcessorEditor::populateObjectProperties()
 {
     if (objectMenu.getSelectedId() != 0) {
-        auto object = raytracer.objects.at(objectMenu.getText());
+        for (const auto& object : raytracer.objects) {
+            if (object.name == objectMenu.getText()) {
+                activeToggle.setToggleState(object.active, NotificationType::dontSendNotification);
+                typeMenu.setSelectedId(object.type);
 
-        activeToggle.setToggleState(object.active, NotificationType::dontSendNotification);
-        typeMenu.setSelectedId(object.type);
-
-        xPositionSlider.setValue(object.position.x);
-        yPositionSlider.setValue(object.position.y);
-        zPositionSlider.setValue(object.position.z);
+                xPositionSlider.setValue(object.position.x);
+                yPositionSlider.setValue(object.position.y);
+                zPositionSlider.setValue(object.position.z);
+            }
+        }
     }
 }
 
 void RaumsimulationAudioProcessorEditor::updateObjectProperties()
 {
     if (objectMenu.getSelectedId() != 0) {
-        auto& object = raytracer.objects.at(objectMenu.getText());
+        for (auto& object : raytracer.objects) {
+            if (object.name == objectMenu.getText()) {
+                object.active = activeToggle.getToggleState();
+                object.type = static_cast<Raytracer::Object::Type>(typeMenu.getSelectedId());
 
-        object.active = activeToggle.getToggleState();
-        object.type = static_cast<Raytracer::Object::Type>(typeMenu.getSelectedId());
-
-        object.position.x = (float) xPositionSlider.getValue();
-        object.position.y = (float) yPositionSlider.getValue();
-        object.position.z = (float) zPositionSlider.getValue();
+                object.position.x = (float) xPositionSlider.getValue();
+                object.position.y = (float) yPositionSlider.getValue();
+                object.position.z = (float) zPositionSlider.getValue();
+            }
+        }
     }
 }
