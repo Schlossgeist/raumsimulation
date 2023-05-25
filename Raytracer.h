@@ -13,22 +13,45 @@ public:
     Raytracer(RaumsimulationAudioProcessor&, juce::AudioProcessorValueTreeState&, const String &windowTitle, bool hasProgressBar, bool hasCancelButton, int timeOutMsWhenCancelling, const String &cancelButtonText, Component *componentToCentreAround);
 
     struct Hit {
-        enum SurfaceType {
-            NONE = 0,
-            WALL = 1,
-            RECEIVER = 2
-        };
-
-        SurfaceType surface = NONE;
+        bool hitSurface = false;
         float distance = 1000000.0f;
         glm::vec3 hitPoint;
         glm::vec3 normal;
         MaterialProperties materialProperties;
     };
 
-    struct Reflection {
+    struct SecondarySource {
+        int order = 0;
+        glm::vec3 position;
+        glm::vec3 normal;
+        float scatterCoefficient;
         Band6Coefficients energy_coefficients;
         float delayMS = 0.0f;
+    };
+
+    struct EnergyPortion {
+        Band6Coefficients energy_coefficients;
+        float delayMS = 0.0f;
+
+        static bool byTotalEnergy (EnergyPortion a, EnergyPortion b)
+        {
+            float totalA = 0;
+            for (float coefficient : a.energy_coefficients.coefficients) {
+                totalA += coefficient;
+            }
+
+            float totalB = 0;
+            for (float coefficient : a.energy_coefficients.coefficients) {
+                totalB += coefficient;
+            }
+
+            return (totalA < totalB);
+        }
+
+        static bool byDelay (EnergyPortion a, EnergyPortion b)
+        {
+            return (a.delayMS < b.delayMS);
+        }
     };
 
     struct Directivity {
@@ -40,33 +63,20 @@ public:
         glm::vec3 orientation;
     };
 
-    struct Microphone {
-        bool active = false;
-        glm::vec3 position = {0.0, 0.0, 0.0};
-        Directivity directivity;
-        std::vector<Reflection> registeredReflections;
-    };
-
-    struct Speaker {
-        bool active = false;
-        glm::vec3 position = {0.0, 0.0, 0.0};
-        Directivity directivity;
-        double power = 10.0;
-    };
-
     struct Object {
         enum Type {
             MICROPHONE = 1,
             SPEAKER = 2
         };
 
+        String name;
         Type type;
         bool active = false;
         glm::vec3 position = {0.0f, 0.0f, 0.0f};
     };
 
     const int maxBounces = 10;
-    const int raysPerSource = 10000;
+    const int raysPerSource = 1000;
     const float speedOfSoundMpS = 343.0f;
 
     struct Ray {
@@ -82,9 +92,9 @@ public:
     void run() override;
     void setRoom(const File& objFile);
 
-    std::vector<Microphone> microphones;
-    std::vector<Speaker> speakers;
-    std::map<String, Object> objects;
+    std::vector<Object> objects;
+    std::map<String, std::vector<EnergyPortion>> histograms;
+    std::vector<SecondarySource> secondarySources;
 
 private:
 
@@ -97,9 +107,8 @@ private:
     float randomNormalDistribution();
 
     void trace(Ray ray);
-    Hit calculateBounce(Ray ray, Reflection reflection);
+    Hit calculateBounce(Ray ray);
+    bool checkVisibility(glm::vec3 positionA, glm::vec3 positionB);
 
-    static Hit collisionSphere(Ray ray, glm::vec3 position, float radius);
     static Hit collisionTriangle(Ray ray, Triangle triangle);
-    static float fractionOccupiedBySphere(float distance, float receiverRadius);
 };

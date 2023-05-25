@@ -132,13 +132,12 @@ void OpenGLComponent::renderOpenGL()
 
     glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
 
-    for (const auto& objectPair : raytracer.objects) {
-        auto microphone = objectPair.second;
-        if (microphone.type == Raytracer::Object::MICROPHONE && microphone.active) {
+    for (const auto& object : raytracer.objects) {
+        if (object.type == Raytracer::Object::MICROPHONE && object.active) {
             auto microphoneMatrix = Matrix3D<float>(1.0f, 0.0f, 0.0f, 0.0f,
                                                     0.0f, 1.0f, 0.0f, 0.0f,
                                                     0.0f, 0.0f, 1.0f, 0.0f,
-                                                    microphone.position.x, microphone.position.y, microphone.position.z, 1.0f);
+                                                    object.position.x, object.position.y, object.position.z, 1.0f);
 
             microphoneShader->use();
 
@@ -159,13 +158,12 @@ void OpenGLComponent::renderOpenGL()
     }
 
 
-    for (const auto& objectPair : raytracer.objects) {
-        auto speaker = objectPair.second;
-        if (speaker.type == Raytracer::Object::SPEAKER && speaker.active) {
+    for (const auto& object : raytracer.objects) {
+        if (object.type == Raytracer::Object::SPEAKER && object.active) {
             auto speakerMatrix = Matrix3D<float>(1.0f, 0.0f, 0.0f, 0.0f,
                                                     0.0f, 1.0f, 0.0f, 0.0f,
                                                     0.0f, 0.0f, 1.0f, 0.0f,
-                                                 speaker.position.x, speaker.position.y, speaker.position.z, 1.0f);
+                                                 object.position.x, object.position.y, object.position.z, 1.0f);
 
             speakerShader->use();
 

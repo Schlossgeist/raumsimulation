@@ -1,18 +1,16 @@
 #include "Raytracer.h"
+#include "externals/glm/glm/gtx/vector_angle.hpp"
 
 Raytracer::Raytracer(RaumsimulationAudioProcessor& p, juce::AudioProcessorValueTreeState& pts, const String &windowTitle, bool hasProgressBar, bool hasCancelButton, int timeOutMsWhenCancelling, const String &cancelButtonText, Component *componentToCentreAround)
     : audioProcessor(p)
     , parameters(pts)
     , ThreadWithProgressWindow(windowTitle, hasProgressBar, hasCancelButton, timeOutMsWhenCancelling, cancelButtonText, componentToCentreAround)
 {
-    microphones.push_back(Microphone{true, glm::vec3{2.5f, 3.5f, 2.0f}});
-    speakers.push_back(Speaker{true, glm::vec3{7.0f, -1.0f, 3.0f}});
+    objects.push_back({"Mic1", Object::Type::MICROPHONE, true, glm::vec3{2.5f, 3.5f, 2.0f}});
+    objects.push_back({"Spk1", Object::Type::SPEAKER, true, glm::vec3{7.0f, -1.0f, 3.0f}});
 
-    objects.insert(std::pair{String("Mic1"), Object{Object::Type::MICROPHONE, true, glm::vec3{2.5f, 3.5f, 2.0f}}});
-    objects.insert(std::pair{String("Spk1"), Object{Object::Type::SPEAKER, true, glm::vec3{7.0f, -1.0f, 3.0f}}});
-
-    objects.insert(std::pair{String("Mic2"), Object{Object::Type::MICROPHONE, false, glm::vec3{0.5f, 0.5f, 2.0f}}});
-    objects.insert(std::pair{String("Spk2"), Object{Object::Type::SPEAKER, false, glm::vec3{3.0f, 1.0f, 3.0f}}});
+    objects.push_back({"Mic2", Object::Type::MICROPHONE, false, glm::vec3{0.5f, 0.5f, 2.0f}});
+    objects.push_back({"Spk2", Object::Type::SPEAKER, false, glm::vec3{3.0f, 1.0f, 3.0f}});
 }
 
 void Raytracer::setRoom(const File& objFile)
@@ -27,48 +25,111 @@ void Raytracer::run()
     setRoom(objFileURL.getLocalFile());
     sleep(1000);
 
+    {
+        std::vector<Object> speakers;
 
-    setStatusMessage("Casting rays...");
+        for (const auto& object : objects) {
+            if (object.type == Object::Type::SPEAKER && object.active) {
+                speakers.push_back(object);
+            }
+        }
 
-    for (int speakerNum = 0; speakerNum < speakers.size(); speakerNum++) {
-        // user pressed "cancel"
-        if (threadShouldExit())
-            break;
+        setStatusMessage("Casting rays...");
 
-        setStatusMessage("Casting Rays for source " + String(speakerNum + 1) + " / " + String(speakers.size()));
-
-        for (int rayNum = 0; rayNum < raysPerSource; rayNum++) {
+        for (int speakerNum = 0; speakerNum < speakers.size(); speakerNum++) {
             // user pressed "cancel"
             if (threadShouldExit())
                 break;
 
-            // generate Ray at speaker position with random direction
-            Ray randomRay = {
-                    speakers[speakerNum].position,
-                    glm::normalize(glm::vec3{randomNormalDistribution(), randomNormalDistribution(), randomNormalDistribution()})
-            };
+            setStatusMessage("Casting Rays for source " + String(speakerNum + 1) + " / " + String(speakers.size()));
 
-            trace(randomRay);
+            for (int rayNum = 0; rayNum < raysPerSource; rayNum++) {
+                // user pressed "cancel"
+                if (threadShouldExit())
+                    break;
 
-            // update the progress bar on the dialog box
-            setProgress((float) ((speakerNum + 1) * (rayNum + 1)) / (float) (speakers.size() * raysPerSource));
+                // generate Ray at speaker position with random direction
+                Ray randomRay = {
+                        speakers[speakerNum].position,
+                        glm::normalize(glm::vec3{randomNormalDistribution(), randomNormalDistribution(), randomNormalDistribution()})
+                };
+
+                trace(randomRay);
+
+                // update the progress bar on the dialog box
+                setProgress((float) ((speakerNum + 1) * (rayNum + 1)) / (float) (speakers.size() * raysPerSource));
+            }
+        }
+    }
+
+    {
+        std::vector<Object> microphones;
+
+        for (const auto& object : objects) {
+            if (object.type == Object::Type::MICROPHONE && object.active) {
+                microphones.push_back(object);
+                histograms.insert(std::pair{object.name, std::vector<EnergyPortion>()});
+            }
+        }
+
+        setStatusMessage("Rendering...");
+
+        for (int microphoneNum = 0; microphoneNum < microphones.size(); microphoneNum++) {
+            auto microphone = microphones[microphoneNum];
+
+            // user pressed "cancel"
+            if (threadShouldExit())
+                break;
+
+            setStatusMessage("Rendering IR for receiver " + String(microphoneNum + 1) + " / " + String(microphones.size()));
+
+            for (int secondarySourceNum = 0; secondarySourceNum < secondarySources.size(); secondarySourceNum++) {
+                auto secondarySource = secondarySources[secondarySourceNum];
+
+                // user pressed "cancel"
+                if (threadShouldExit())
+                    break;
+
+                if (checkVisibility(secondarySource.position, microphone.position)) {
+                    // lamberts cosine law:
+                    // energy received at the observers is proportional to the cosine of the angle between the reflection vector and the surface normal
+                    glm::vec3 edgeSM = glm::normalize(microphone.position - secondarySource.position);
+                    float     angle  = glm::angle(glm::normalize(secondarySource.normal), edgeSM);
+                    secondarySource.energy_coefficients *= cos(angle);
+
+                    histograms.at(microphone.name).push_back({secondarySource.energy_coefficients, secondarySource.delayMS});
+                }
+
+                // update the progress bar on the dialog box
+                setProgress((float) ((microphoneNum + 1) * (secondarySourceNum + 1)) / (float) (microphones.size() * secondarySources.size()));
+            }
         }
     }
 
     setStatusMessage("Generating impulse response...");
+
+    std::sort(histograms.at("Mic1").begin(), histograms.at("Mic1").end(), EnergyPortion::byDelay);
+
     sleep(1000);
 }
 
 void Raytracer::trace(Raytracer::Ray ray)
 {
-    Reflection reflection;
+    SecondarySource secondarySource;
 
     for (int bounce = 0; bounce < maxBounces; bounce++) {
-        Hit hit = calculateBounce(ray, reflection);
+        Hit hit = calculateBounce(ray);
 
-        if (hit.surface) {
-            reflection.delayMS += hit.distance / speedOfSoundMpS * 1000.0f;
-            reflection.energy_coefficients *= -hit.materialProperties.absorptionCoefficients;
+        if (hit.hitSurface) {
+            // records secondary source
+            secondarySource.order++;
+            secondarySource.position = hit.hitPoint;
+            secondarySource.normal = hit.normal;
+            secondarySource.scatterCoefficient = hit.materialProperties.roughness;
+            secondarySource.delayMS += hit.distance / speedOfSoundMpS * 1000.0f;
+            secondarySource.energy_coefficients *= -hit.materialProperties.absorptionCoefficients;
+
+            secondarySources.push_back(secondarySource);
 
             ray.position = hit.hitPoint;
 
@@ -82,28 +143,13 @@ void Raytracer::trace(Raytracer::Ray ray)
                 diffuseReflection *= -1;
             }
             ray.direction = normalize(mix(specularReflection, diffuseReflection, hit.materialProperties.roughness));
-
-            // calculate scattered energy portion
-            for (const Microphone& microphone : microphones) {
-                Ray scatteredRay = {
-                        hit.hitPoint,
-                        hit.hitPoint - microphone.position
-                };
-
-                Reflection scatteredReflection = {
-                        reflection.energy_coefficients *= fractionOccupiedBySphere(glm::length(scatteredRay.direction), 0.5f),
-                        reflection.delayMS
-                };
-
-                Hit scatteredHit = calculateBounce(scatteredRay, scatteredReflection);
-            }
         } else {
             break;
         }
     }
 }
 
-Raytracer::Hit Raytracer::calculateBounce(Ray ray, Reflection reflection)
+Raytracer::Hit Raytracer::calculateBounce(Ray ray)
 {
     Hit hit;
 
@@ -121,19 +167,10 @@ Raytracer::Hit Raytracer::calculateBounce(Ray ray, Reflection reflection)
 
             Hit triangleHit = collisionTriangle(ray, triangle);
 
-            if (triangleHit.surface && triangleHit.distance < hit.distance) {
+            if (triangleHit.hitSurface && triangleHit.distance < hit.distance) {
                 triangleHit.materialProperties = shape->materialProperties;
                 hit = triangleHit;
             }
-        }
-    }
-
-    for (Microphone& microphone : microphones) {
-        Hit sphereHit = collisionSphere(ray, microphone.position, 0.5f);
-
-        if (sphereHit.surface && sphereHit.distance < hit.distance && microphone.active) {
-            reflection.delayMS += sphereHit.distance / speedOfSoundMpS * 1000.0f;
-            microphone.registeredReflections.push_back(reflection);
         }
     }
 
@@ -153,41 +190,6 @@ float Raytracer::randomNormalDistribution()
 }
 
 /**
- * Standard quadratic equation with
- * @code
- * p = 2*(ray.direction ⋅ (ray.position - center))/(ray.direction)^2
- * q = ((ray.position - center)^2 - radius^2)/(ray.direction)^2
- * @endcode
- *
- * @see https://en.wikipedia.org/wiki/Line-sphere_intersection
- */
-Raytracer::Hit Raytracer::collisionSphere(Raytracer::Ray ray, glm::vec3 center, float radius)
-{
-    Hit hit;
-
-    float p        = 2*dot(ray.direction, ray.position - center)/dot(ray.direction, ray.direction);
-    float q        = (dot(ray.position - center, ray.position - center) - radius * radius)/dot(ray.direction, ray.direction);
-    float radicand = p*p/4 - q;
-
-    if (radicand >= 0) {                                                // equation has solution(s): ray intersects the sphere in 1 or 2 points
-        float distance = -p/2 - sqrt(radicand);                     // only calculate nearest intersection
-
-        if (distance >= 0) {                                            // ignore intersections behind the ray
-            hit.surface = Hit::RECEIVER;
-            hit.distance = distance;
-            hit.hitPoint = ray.position + (ray.direction * distance);   // move direction to origin and scale by distance
-            hit.normal = normalize(hit.hitPoint - center);
-        } else {
-            hit.surface = Hit::NONE;
-        }
-    } else {                // equation has no solution: ray missed the sphere
-        hit.surface = Hit::NONE;
-    }
-
-    return hit;
-}
-
-/**
  * Points of the ray can be expressed as
  * @code
  * P = ray.position + t*ray.direction
@@ -201,6 +203,9 @@ Raytracer::Hit Raytracer::collisionSphere(Raytracer::Ray ray, glm::vec3 center, 
  *
  * @see https://en.wikipedia.org/wiki/Möller-Trumbore_intersection_algorithm
  * @see https://stackoverflow.com/a/42752998
+ *
+ * @param ray           Ray the intersection test is performed on. Direction vector should be normalized.
+ * @param triangle      Triangle the intersection test is performed on.
  */
 Raytracer::Hit Raytracer::collisionTriangle(Raytracer::Ray ray, Raytracer::Triangle triangle)
 {
@@ -218,33 +223,35 @@ Raytracer::Hit Raytracer::collisionTriangle(Raytracer::Ray ray, Raytracer::Trian
         float     v      = -dot(edgeAB, dap) / det;
         float     t      =  dot(ap, n)       / det;
 
-        if (t   >= 0.0f
+        if (t   >= 0.0001f                                              // do not register a hit inside the same surface the rays bounces off of
          && u   >= 0.0f
          && v   >= 0.0f
          && u+v <= 1.0f) {
-            hit.surface = Hit::WALL;
+            hit.hitSurface = true;
             hit.hitPoint = ray.position + t * ray.direction;
             hit.distance = dot(ap, n) / det;
             hit.normal = triangle.normal;
-        } else {
-            hit.surface = Hit::NONE;
         }
-    } else {                                                            // dot product is zero when ray and triangle plane are parallel: no intersection
-        hit.surface = Hit::NONE;
     }
 
     return hit;
 }
 
 /**
- * @see https://gamedev.stackexchange.com/a/75775
+ * Simple visibility check that uses the geometry of the currently loaded room.
  */
-float Raytracer::fractionOccupiedBySphere(float distance, float receiverRadius)
+bool Raytracer::checkVisibility(glm::vec3 positionA, glm::vec3 positionB)
 {
-    float totalAreaOfHalfSphere = 4 * glm::pi<float>() * distance * distance / 2;
+    Ray edgeAB = {
+            positionA,
+            glm::normalize(positionB - positionA)
+    };
 
-    float h                = 1.0f - receiverRadius * receiverRadius / 2 * distance * distance;
-    float intersectionArea = sqrt(distance * distance * (1.0f - h * h));
+    Hit hit = calculateBounce(edgeAB);
 
-    return intersectionArea / totalAreaOfHalfSphere;
+    if (hit.hitSurface && hit.distance < glm::length(positionB - positionA)) {
+        return false;
+    }
+
+    return true;
 }
