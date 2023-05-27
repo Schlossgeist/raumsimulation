@@ -1,9 +1,11 @@
 #include "Raytracer.h"
+#include "ImpulseResponseComponent.h"
 #include "externals/glm/glm/gtx/vector_angle.hpp"
 
-Raytracer::Raytracer(RaumsimulationAudioProcessor& p, juce::AudioProcessorValueTreeState& pts, const String &windowTitle, bool hasProgressBar, bool hasCancelButton, int timeOutMsWhenCancelling, const String &cancelButtonText, Component *componentToCentreAround)
+Raytracer::Raytracer(RaumsimulationAudioProcessor& p, juce::AudioProcessorValueTreeState& pts, ImpulseResponseComponent& irc, const String &windowTitle, bool hasProgressBar, bool hasCancelButton, int timeOutMsWhenCancelling, const String &cancelButtonText, Component *componentToCentreAround)
     : audioProcessor(p)
     , parameters(pts)
+    , impulseResponseComponent(irc)
     , ThreadWithProgressWindow(windowTitle, hasProgressBar, hasCancelButton, timeOutMsWhenCancelling, cancelButtonText, componentToCentreAround)
 {
     objects.push_back({"Mic1", Object::Type::MICROPHONE, true, glm::vec3{2.5f, 3.5f, 2.0f}});
@@ -25,6 +27,23 @@ void Raytracer::run()
     setRoom(objFileURL.getLocalFile());
     sleep(1000);
 
+    String activeMicrophoneName;
+
+    for (const auto& object : objects) {
+        if (object.type == Object::MICROPHONE && object.active) {
+            activeMicrophoneName = object.name;
+            break;
+        }
+    }
+
+    if (!activeMicrophoneName.isEmpty()) {
+        setStatusMessage("Using " + activeMicrophoneName + " for IR generation");
+        sleep(1000);
+    } else {
+        return;
+    }
+
+    //========================= RAY TRACING =========================//
     {
         std::vector<Object> speakers;
 
@@ -42,6 +61,9 @@ void Raytracer::run()
                 break;
 
             setStatusMessage("Casting Rays for source " + String(speakerNum + 1) + " / " + String(speakers.size()));
+
+            // add source for direct sound
+            secondarySources.push_back({0, speakers[speakerNum].position, glm::vec3(), 0.0f, Band6Coefficients(), 0.0f});
 
             for (int rayNum = 0; rayNum < raysPerSource; rayNum++) {
                 // user pressed "cancel"
@@ -62,6 +84,31 @@ void Raytracer::run()
         }
     }
 
+    //========================= ROOM VOLUME ESTIMATION =========================//
+    float roomVolumeM3 = 0.0f;
+    {
+        float minX = 0.0f;
+        float minY = 0.0f;
+        float minZ = 0.0f;
+        float maxX = 0.0f;
+        float maxY = 0.0f;
+        float maxZ = 0.0f;
+
+        for (auto secondarySource : secondarySources) {
+            glm::vec3 sp = secondarySource.position;
+            if (sp.x < minX) minX = sp.x;
+            if (sp.y < minY) minY = sp.y;
+            if (sp.z < minZ) minZ = sp.z;
+            if (sp.x > maxX) maxX = sp.x;
+            if (sp.y > maxY) maxY = sp.y;
+            if (sp.z > maxZ) maxZ = sp.z;
+        }
+
+        roomVolumeM3 = (abs(minX) + abs(maxX)) * (abs(minY) + abs(maxY)) * (abs(minZ) + abs(maxZ));
+        roomVolumeM3 = floor(roomVolumeM3 / 10.0f) * 10.0f;
+    }
+
+    //========================= GATHERING =========================//
     {
         std::vector<Object> microphones;
 
@@ -72,8 +119,6 @@ void Raytracer::run()
             }
         }
 
-        setStatusMessage("Rendering...");
-
         for (int microphoneNum = 0; microphoneNum < microphones.size(); microphoneNum++) {
             auto microphone = microphones[microphoneNum];
 
@@ -81,7 +126,7 @@ void Raytracer::run()
             if (threadShouldExit())
                 break;
 
-            setStatusMessage("Rendering IR for receiver " + String(microphoneNum + 1) + " / " + String(microphones.size()));
+            setStatusMessage("Gathering energy contributions for receiver " + String(microphoneNum + 1) + " / " + String(microphones.size()));
 
             for (int secondarySourceNum = 0; secondarySourceNum < secondarySources.size(); secondarySourceNum++) {
                 auto secondarySource = secondarySources[secondarySourceNum];
@@ -91,12 +136,15 @@ void Raytracer::run()
                     break;
 
                 if (checkVisibility(secondarySource.position, microphone.position)) {
-                    // lamberts cosine law:
-                    // energy received at the observers is proportional to the cosine of the angle between the reflection vector and the surface normal
-                    glm::vec3 edgeSM = glm::normalize(microphone.position - secondarySource.position);
-                    float     angle  = glm::angle(glm::normalize(secondarySource.normal), edgeSM);
-                    secondarySource.energy_coefficients *= cos(angle);
+                    if (secondarySource.order > 0) {
+                        // lamberts cosine law:
+                        // energy received at the observers is proportional to the cosine of the angle between the reflection vector and the surface normal
+                        glm::vec3 edgeSM = glm::normalize(microphone.position - secondarySource.position);
+                        float     angle  = glm::angle(glm::normalize(secondarySource.normal), edgeSM);
+                        secondarySource.energy_coefficients *= cos(angle);
+                    }
 
+                    secondarySource.delayMS += glm::length(secondarySource.position - microphone.position) / speedOfSoundMpS * 1000.0f;
                     histograms.at(microphone.name).push_back({secondarySource.energy_coefficients, secondarySource.delayMS});
                 }
 
@@ -106,9 +154,144 @@ void Raytracer::run()
         }
     }
 
-    setStatusMessage("Generating impulse response...");
+    //========================= GENERATING =========================//
+    {
+        setStatusMessage("Generating impulse response...");
 
-    std::sort(histograms.at("Mic1").begin(), histograms.at("Mic1").end(), EnergyPortion::byDelay);
+        std::sort(histograms.at(activeMicrophoneName).begin(), histograms.at(activeMicrophoneName).end(), EnergyPortion::byDelay);
+
+        double latestReflectionS = histograms.at(activeMicrophoneName)[histograms.at(activeMicrophoneName).size() - 1].delayMS / 1000.0f;
+
+        audioProcessor.ir.setSize(audioProcessor.ir.getNumChannels(),
+                                  audioProcessor.globalSampleRate * (latestReflectionS + 0.1f),
+                                  false,
+                                  true,
+                                  false);
+
+        double endOfLastIntervalMS = histograms.at(activeMicrophoneName)[0].delayMS;
+
+        setStatusMessage("Generating dirac sequence...");
+
+        while (endOfLastIntervalMS < latestReflectionS * 1000.0f) {
+            // random value from nextDouble() is in range 0 (inclusive) to 1.0 (exclusive),
+            // but here range 0 (exclusive) to 1.0 (inclusive) is needed because this value is used as a denominator
+            double randomNumber = abs(randomGenerator.nextDouble() - 1);
+            double currentTimeMS = endOfLastIntervalMS;
+
+            /**
+             * @see Section 5.3.4 in Dirk Schröder, Physically Based Real-Time Auralization of Interactive Virtual Environments
+             */
+
+            double speedOfSound3MpS = speedOfSoundMpS * speedOfSoundMpS * speedOfSoundMpS;
+            double currentTime2S = (currentTimeMS / 1000.0f) * (currentTimeMS / 1000.0f);
+            double volumeM3 = 650.0f;
+
+            double u = (4.0f * glm::pi<double>() * speedOfSound3MpS * currentTime2S) / volumeM3;
+
+            if (u > 10000.0f) {
+                u = 10000.0f;
+            }
+
+            double intervalSizeMS = 1 / u * log(1 / randomNumber) * 1000.0f;
+
+            double lengthOfSampleMS = 1 / audioProcessor.globalSampleRate * 1000.0f;
+
+            if (intervalSizeMS < lengthOfSampleMS) {
+                intervalSizeMS = lengthOfSampleMS;
+            }
+
+            float dirac = 1.0f;
+
+            if (randomGenerator.nextDouble() > 0.5f) {
+                dirac = -1.0f;
+            }
+
+            double eventTimeMS = currentTimeMS + randomGenerator.nextDouble() * intervalSizeMS;
+
+            int sample = (int) (eventTimeMS * audioProcessor.globalSampleRate / 1000.0f);
+
+            auto *writePtrArray = audioProcessor.ir.getArrayOfWritePointers();
+            for (int channel = 0; channel < audioProcessor.ir.getNumChannels(); channel++) {
+                writePtrArray[channel][sample] = dirac;
+            }
+
+            endOfLastIntervalMS += intervalSizeMS;
+        }
+
+        sleep(1000);
+    }
+
+    impulseResponseComponent.updateThumbnail(audioProcessor.globalSampleRate);
+
+    {
+        auto diracBuffer = audioProcessor.ir;
+
+        AudioBuffer<float> bandBuffers[6] = {diracBuffer, diracBuffer, diracBuffer, diracBuffer, diracBuffer, diracBuffer};
+
+        for (int i = 0; i < 6; i++) {
+            setStatusMessage("Filtering for band " + String(i+1) + "/6");
+
+            double centerFrequency = pow(2, i)*125;
+            IIRFilter filter;
+            filter.setCoefficients(juce::IIRCoefficients::makeBandPass(
+                    audioProcessor.globalSampleRate,
+                    centerFrequency,
+                    1.0f/sqrt(2.0f)));
+
+            auto *writePtrArray = bandBuffers[i].getArrayOfWritePointers();
+            for (int channel = 0; channel < bandBuffers[i].getNumChannels(); channel++) {
+                filter.processSamples(writePtrArray[channel], bandBuffers[i].getNumSamples());
+            }
+        }
+
+        AudioBuffer<float> gainCurveBuffers[6] = {audioProcessor.ir, audioProcessor.ir, audioProcessor.ir, audioProcessor.ir, audioProcessor.ir, audioProcessor.ir};
+
+
+        for (int sample = 0; sample < audioProcessor.ir.getNumSamples(); sample++) {
+            double centerTimeMS = sample / audioProcessor.globalSampleRate * 1000.0f;
+            double rangeTimeMS = 25.0f;
+            auto slice = extractHistogramSlice(centerTimeMS, rangeTimeMS, activeMicrophoneName);
+
+            for (int channel = 0; channel < audioProcessor.ir.getNumChannels(); channel++) {
+                for (int i = 0; i < 6; i++) {
+                    setStatusMessage("Calculating gain curve for sample " + String(sample+1) + "/" + String(audioProcessor.ir.getNumSamples())
+                                     + " in band " + String(pow(2, i)*125.0f));
+                    auto *writePtrArray = gainCurveBuffers[i].getArrayOfWritePointers();
+                    if (!slice.empty()) {
+                        float gain = 0.0f;
+                        for (int ep = 0; ep < slice.size(); ep++) {
+                            gain += slice[ep].energy_coefficients[i];
+                        }
+                        gain /= (float) slice.size();
+                        writePtrArray[channel][sample] = gain*gain;
+                    }
+                }
+            }
+        }
+
+        for (int i = 0; i < 6; i++) {
+            setStatusMessage("Showing band " + String(pow(2, i)*125.0f));
+            audioProcessor.ir = gainCurveBuffers[i];
+            impulseResponseComponent.updateThumbnail(audioProcessor.globalSampleRate);
+            sleep(1000);
+        }
+
+        audioProcessor.ir.clear();
+
+        for (int i = 0; i < 6; i++) {
+            auto *writePtrArray = audioProcessor.ir.getArrayOfWritePointers();
+            auto *readPtrArray = bandBuffers[i].getArrayOfReadPointers();
+            for (int channel = 0; channel < bandBuffers[i].getNumChannels(); channel++) {
+                for (int sample = 0; sample < bandBuffers[i].getNumSamples(); sample++) {
+                    writePtrArray[channel][sample] += readPtrArray[channel][sample];
+                }
+            }
+        }
+
+        sleep(1000);
+    }
+
+    impulseResponseComponent.updateThumbnail(audioProcessor.globalSampleRate);
 
     sleep(1000);
 }

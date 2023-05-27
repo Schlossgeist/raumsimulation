@@ -1,16 +1,17 @@
 # pragma once
 
-#include <JuceHeader.h>
-#include "externals/glm/glm/glm.hpp"
-#include "externals/glm/glm/ext.hpp"
-#include "WavefrontObjParser.h"
-#include "PluginProcessor.h"
 #include "CustomDatatypes.h"
+#include "ImpulseResponseComponent.h"
+#include "PluginProcessor.h"
+#include "WavefrontObjParser.h"
+#include "externals/glm/glm/ext.hpp"
+#include "externals/glm/glm/glm.hpp"
+#include <JuceHeader.h>
 
 class Raytracer : public juce::ThreadWithProgressWindow
 {
 public:
-    Raytracer(RaumsimulationAudioProcessor&, juce::AudioProcessorValueTreeState&, const String &windowTitle, bool hasProgressBar, bool hasCancelButton, int timeOutMsWhenCancelling, const String &cancelButtonText, Component *componentToCentreAround);
+    Raytracer(RaumsimulationAudioProcessor&, juce::AudioProcessorValueTreeState&, ImpulseResponseComponent&, const String &windowTitle, bool hasProgressBar, bool hasCancelButton, int timeOutMsWhenCancelling, const String &cancelButtonText, Component *componentToCentreAround);
 
     struct Hit {
         bool hitSurface = false;
@@ -76,7 +77,7 @@ public:
     };
 
     const int maxBounces = 10;
-    const int raysPerSource = 1000;
+    const int raysPerSource = 100;
     const float speedOfSoundMpS = 343.0f;
 
     struct Ray {
@@ -94,11 +95,40 @@ public:
 
     std::vector<Object> objects;
     std::map<String, std::vector<EnergyPortion>> histograms;
+
+    std::vector<EnergyPortion> extractHistogramSlice(double centerTimeMS, double rangeTimeMS, String activeMicrophoneName)
+    {
+        double startTimeMS   = centerTimeMS - rangeTimeMS/2;
+        double endTimeMS     = centerTimeMS + rangeTimeMS/2;
+
+        std::vector<EnergyPortion> result;
+
+        if (startTimeMS < 0.0f) {
+            startTimeMS = 0.0f;
+        }
+
+        auto energyPortions = histograms.at(activeMicrophoneName);
+        std::sort(energyPortions.begin(), energyPortions.end(), EnergyPortion::byDelay);
+
+        for (auto& energyPortion : energyPortions) {
+            if (endTimeMS < energyPortion.delayMS) {
+                break;
+            }
+
+            if (startTimeMS < energyPortion.delayMS && energyPortion.delayMS < endTimeMS) {
+                result.push_back(energyPortion);
+            }
+        }
+
+        return result;
+    }
+
     std::vector<SecondarySource> secondarySources;
 
 private:
 
     RaumsimulationAudioProcessor& audioProcessor;
+    ImpulseResponseComponent& impulseResponseComponent;
     juce::AudioProcessorValueTreeState& parameters;
 
     WavefrontObjFile room;

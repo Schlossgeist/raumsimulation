@@ -16,7 +16,7 @@ RaumsimulationAudioProcessorEditor::RaumsimulationAudioProcessorEditor(Raumsimul
     , impulseResponseComponent(p, pts)
     , audioProcessor(p)
     , parameterTreeState(pts)
-    , raytracer(p, pts, "Generating Impulse Response...", true, true, 1000, "Cancel", this->getParentComponent())
+    , raytracer(p, pts, impulseResponseComponent, "Generating Impulse Response...", true, true, 1000, "Cancel", this->getParentComponent())
     , openGLComponent(p, pts, raytracer)
 {
     // Make sure that before the constructor has finished, you've set the
