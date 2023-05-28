@@ -29,6 +29,7 @@
 
 #include <JuceHeader.h>
 #include "OpenGLComponent.h"
+#include "externals/glm/glm/gtx/color_space.hpp"
 
 //==============================================================================
 OpenGLComponent::OpenGLComponent(RaumsimulationAudioProcessor& p, juce::AudioProcessorValueTreeState& pts, Raytracer& r)
@@ -55,7 +56,7 @@ OpenGLComponent::~OpenGLComponent()
     openGLContext.detach();
 }
 
-void OpenGLComponent::paint (juce::Graphics& /*g*/)
+void OpenGLComponent::paint(juce::Graphics& /*g*/)
 {
 }
 
@@ -93,7 +94,7 @@ void OpenGLComponent::renderOpenGL()
 
     updateShader();   // Check whether we need to compile a new shader
 
-    if (shader.get() == nullptr)
+    if (roomShader == nullptr)
         return;
 
     // Having used the juce 2D renderer, it will have messed-up a whole load of GL state, so
@@ -114,7 +115,7 @@ void OpenGLComponent::renderOpenGL()
 
     glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);      // wireframe mode for room draw call
 
-    shader->use();
+    roomShader->use();
 
     if (uniforms->projectionMatrix != nullptr)
         uniforms->projectionMatrix->setMatrix4(getProjectionMatrix().mat, 1, false);
@@ -128,7 +129,7 @@ void OpenGLComponent::renderOpenGL()
     if (uniforms->rotationMatrix != nullptr)
         uniforms->rotationMatrix->setMatrix4(Matrix3D<float>().mat, 1, false);
 
-    shape->draw(*attributes);
+    roomShape->draw(*attributes);
 
     glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
 
@@ -183,6 +184,81 @@ void OpenGLComponent::renderOpenGL()
         }
     }
 
+    visualizationShader->use();
+
+    if (uniforms->projectionMatrix != nullptr)
+        uniforms->projectionMatrix->setMatrix4(getProjectionMatrix().mat, 1, false);
+
+    if (uniforms->viewMatrix != nullptr)
+        uniforms->viewMatrix->setMatrix4(getViewMatrix().mat, 1, false);
+
+    if (uniforms->positionMatrix != nullptr)
+        uniforms->positionMatrix->setMatrix4(Matrix3D<float>().mat, 1 ,false);
+
+    if (uniforms->rotationMatrix != nullptr)
+        uniforms->rotationMatrix->setMatrix4(Matrix3D<float>().mat, 1, false);
+
+    struct VertexBuffer
+    {
+        explicit VertexBuffer(std::vector<Raytracer::SecondarySource>& secondarySources)
+        {
+            using namespace ::juce::gl;
+
+            size = secondarySources.size();
+
+            glGenBuffers(1, &vertexBuffer);
+            glBindBuffer(GL_ARRAY_BUFFER, vertexBuffer);
+
+            Array<OpenGLUtils::Vertex> vertices;
+
+            for (auto secondarySource : secondarySources) {
+
+                auto color = glm::rgbColor(glm::vec3(360.0f - (10.0f * (float) secondarySource.order), 1.0f, 0.5f));
+
+                OpenGLUtils::Vertex vertex{
+                        {secondarySource.position.x, secondarySource.position.y, secondarySource.position.z},
+                        {secondarySource.normal.x, secondarySource.normal.y, secondarySource.normal.z},
+                        {color.r, color.g, color.b, 0.5f},
+                };
+
+                vertices.add(vertex);
+            }
+
+            glBufferData(GL_ARRAY_BUFFER, vertices.size() * (int)sizeof(OpenGLUtils::Vertex),
+                         vertices.getRawDataPointer(), GL_STATIC_DRAW);
+        }
+
+        ~VertexBuffer()
+        {
+            using namespace ::juce::gl;
+
+            glDeleteBuffers(1, &vertexBuffer);
+        }
+
+        void bind()
+        {
+            using namespace ::juce::gl;
+
+            glBindBuffer(GL_ARRAY_BUFFER, vertexBuffer);
+        }
+
+        int size;
+        GLuint vertexBuffer;
+
+        JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(VertexBuffer)
+    };
+
+    VertexBuffer secondarySourcesVertexBuffer(raytracer.secondarySources);
+
+    secondarySourcesVertexBuffer.bind();
+
+    glPointSize(3);
+
+    attributes->enable();
+    glDrawElements(GL_POINTS, secondarySourcesVertexBuffer.size, GL_UNSIGNED_INT, nullptr);
+    attributes->disable();
+
+
     // Reset the element buffers so child Components draw correctly
     glBindBuffer(GL_ARRAY_BUFFER, 0);
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
@@ -216,61 +292,109 @@ Matrix3D<float> OpenGLComponent::getViewMatrix() const
     return viewMatrix * rotationMatrix * flipMatrix;
 }
 
-void OpenGLComponent::setShaderProgram(const String& vertexShader, const String& fragmentShader)
+void OpenGLComponent::setShaderProgram()
 {
     const ScopedLock lock(shaderMutex); // Prevent concurrent access to shader strings and status
 
-    auto roomShaderStream = new MemoryInputStream(BinaryData::room_shader, BinaryData::room_shaderSize, true);
-    auto microphoneShaderStream = new MemoryInputStream(BinaryData::microphone_shader, BinaryData::microphone_shaderSize, true);
-    auto speakerShaderStream = new MemoryInputStream(BinaryData::speaker_shader, BinaryData::speaker_shaderSize, true);
+    newRoomVertexShader =
+            R"(#version 450
+               in vec4 position;
 
+               uniform mat4 projectionMatrix;
+               uniform mat4 viewMatrix;
 
-    newVertexShader = parseShader(*roomShaderStream, SHADER_VERTEX);
-    newFragmentShader = parseShader(*roomShaderStream, SHADER_FRAGMENT);
+               void main()
+               {
+                   gl_Position = projectionMatrix * viewMatrix * position;
+               }
+            )";
+    newRoomFragmentShader =
+            R"(#version 450
+               layout(location = 0) out vec4 color;
 
-    newMicrophoneVertexShader = parseShader(*microphoneShaderStream, SHADER_VERTEX);
-    newMicrophoneFragmentShader = parseShader(*microphoneShaderStream, SHADER_FRAGMENT);
+               void main()
+               {
+                   color = vec4(0.50, 0.50, 0.50, 0.50);
+               }
+            )";
 
-    newSpeakerVertexShader = parseShader(*speakerShaderStream, SHADER_VERTEX);
-    newSpeakerFragmentShader = parseShader(*speakerShaderStream, SHADER_FRAGMENT);
-}
+    newMicrophoneVertexShader =
+            R"(#version 450
+               in vec4 position;
 
-static bool matchToken (String::CharPointerType& t, const char* token)
-{
-    auto len = (int) strlen (token);
+               uniform mat4 projectionMatrix;
+               uniform mat4 viewMatrix;
+               uniform mat4 positionMatrix;
+               uniform mat4 rotationMatrix;
 
-    if (CharacterFunctions::compareUpTo (CharPointer_ASCII (token), t, len) == 0)
-    {
-        auto end = t + len;
+               void main()
+               {
+                   gl_Position = projectionMatrix * viewMatrix * position;
+               }
+            )";
 
-        if (end.isEmpty() || end.isWhitespace())
-        {
-            t = end.findEndOfWhitespace();
-            return true;
-        }
-    }
+    newMicrophoneFragmentShader =
+            R"(#version 450
+               layout(location = 0) out vec4 color;
 
-    return false;
-}
+               void main()
+               {
+                   color = vec4(0.50, 0.00, 0.00, 0.75);
+               }
+            )";
 
-String OpenGLComponent::parseShader(const MemoryInputStream& shader_stream, ShaderType shaderToExtract)
-{
-    ShaderType currentShaderType = SHADER_NONE;
-    String result;
-    StringArray lines = StringArray::fromLines(String(CharPointer_UTF8((const char*) shader_stream.getData())));
+    newSpeakerVertexShader =
+            R"(#version 450
+               in vec4 position;
 
-    for (auto lineNum = 0; lineNum < lines.size() - 1; ++lineNum) {
-        auto l = lines[lineNum].getCharPointer().findEndOfWhitespace();
+               uniform mat4 projectionMatrix;
+               uniform mat4 viewMatrix;
+               uniform mat4 positionMatrix;
+               uniform mat4 rotationMatrix;
 
-        if (matchToken (l, "#SHADER_VERTEX"))       { currentShaderType = SHADER_VERTEX;       continue; }
-        if (matchToken (l, "#SHADER_FRAGMENT"))     { currentShaderType = SHADER_FRAGMENT;     continue; }
-        if (matchToken (l, "#SHADER_COMPUTE"))      { currentShaderType = SHADER_COMPUTE;      continue; }
+               void main()
+               {
+                   gl_Position = projectionMatrix * viewMatrix * position;
+               }
+            )";
 
-        if (shaderToExtract == currentShaderType) {
-            result += String(l).trim();
-            result += "\n";
-        }
-    }
+    newSpeakerFragmentShader =
+            R"(#version 450
+               layout(location = 0) out vec4 color;
 
-    return result;
+               void main()
+               {
+                   color = vec4(0.00, 0.00, 0.50, 0.75);
+               }
+            )";
+
+    newVisualizationVertexShader =
+            R"(#version 450
+               in vec4 position;
+               in vec4 sourceColor;
+
+               out vec4 destinationColor;
+
+               uniform mat4 projectionMatrix;
+               uniform mat4 viewMatrix;
+               uniform mat4 positionMatrix;
+               uniform mat4 rotationMatrix;
+
+               void main()
+               {
+                   destinationColor = sourceColor;
+                   gl_Position = projectionMatrix * viewMatrix * position;
+               }
+            )";
+    newVisualizationFragmentShader =
+            R"(#version 450
+               in vec4 destinationColor;
+
+               layout(location = 0) out vec4 color;
+
+               void main()
+               {
+                   color = destinationColor;
+               }
+            )";
 }

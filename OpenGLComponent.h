@@ -17,7 +17,7 @@ struct OpenGLUtils
     {
         float position[3];
         float normal[3];
-        float colour[4];
+        float color[4];
     };
 
     //==============================================================================
@@ -27,30 +27,29 @@ struct OpenGLUtils
         explicit Attributes(OpenGLShaderProgram& shader)
         {
             position.reset(createAttribute(shader, "position"));
-            normal.reset(createAttribute(shader, "normal"));
-            sourceColour.reset(createAttribute(shader, "sourceColour"));
+            sourceColor.reset(createAttribute(shader, "sourceColor"));
         }
 
         void enable()
         {
             using namespace ::juce::gl;
 
-            if (position.get() != nullptr)
+            if (position != nullptr)
             {
                 glVertexAttribPointer(position->attributeID, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex), nullptr);
                 glEnableVertexAttribArray(position->attributeID);
             }
 
-            if (normal.get() != nullptr)
+            if (normal != nullptr)
             {
                 glVertexAttribPointer(normal->attributeID, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex), (GLvoid*)(sizeof(float) * 3));
                 glEnableVertexAttribArray(normal->attributeID);
             }
 
-            if (sourceColour.get() != nullptr)
+            if (sourceColor != nullptr)
             {
-                glVertexAttribPointer(sourceColour->attributeID, 4, GL_FLOAT, GL_FALSE, sizeof(Vertex), (GLvoid*)(sizeof(float) * 6));
-                glEnableVertexAttribArray(sourceColour->attributeID);
+                glVertexAttribPointer(sourceColor->attributeID, 4, GL_FLOAT, GL_FALSE, sizeof(Vertex), (GLvoid*)(sizeof(float) * 6));
+                glEnableVertexAttribArray(sourceColor->attributeID);
             }
         }
 
@@ -58,12 +57,12 @@ struct OpenGLUtils
         {
             using namespace ::juce::gl;
 
-            if (position.get() != nullptr)        glDisableVertexAttribArray(position->attributeID);
-            if (normal.get() != nullptr)          glDisableVertexAttribArray(normal->attributeID);
-            if (sourceColour.get() != nullptr)    glDisableVertexAttribArray(sourceColour->attributeID);
+            if (position != nullptr)        glDisableVertexAttribArray(position->attributeID);
+            if (normal != nullptr)          glDisableVertexAttribArray(normal->attributeID);
+            if (sourceColor != nullptr)    glDisableVertexAttribArray(sourceColor->attributeID);
         }
 
-        std::unique_ptr<OpenGLShaderProgram::Attribute> position, normal, sourceColour;
+        std::unique_ptr<OpenGLShaderProgram::Attribute> position, normal, sourceColor;
 
     private:
         static OpenGLShaderProgram::Attribute* createAttribute(OpenGLShaderProgram& shader,
@@ -86,12 +85,11 @@ struct OpenGLUtils
         {
             projectionMatrix.reset(createUniform(shader, "projectionMatrix"));
             viewMatrix.reset(createUniform(shader, "viewMatrix"));
-            lightPosition.reset(createUniform(shader, "lightPosition"));
             positionMatrix.reset(createUniform(shader, "positionMatrix"));
             rotationMatrix.reset(createUniform(shader, "rotationMatrix"));
         }
 
-        std::unique_ptr<OpenGLShaderProgram::Uniform> projectionMatrix, viewMatrix, lightPosition, positionMatrix, rotationMatrix;
+        std::unique_ptr<OpenGLShaderProgram::Uniform> projectionMatrix, viewMatrix, positionMatrix, rotationMatrix;
 
     private:
         static OpenGLShaderProgram::Uniform* createUniform(OpenGLShaderProgram& shader,
@@ -563,7 +561,7 @@ public:
     OpenGLComponent(RaumsimulationAudioProcessor&, juce::AudioProcessorValueTreeState&, Raytracer&);
     ~OpenGLComponent() override;
 
-    void paint (juce::Graphics&) override;
+    void paint(juce::Graphics&) override;
     void resized() override;
 
     // OpenGLRenderer overrides
@@ -575,19 +573,10 @@ public:
     Matrix3D<float> getProjectionMatrix() const;
     Matrix3D<float> getViewMatrix() const;
 
-    enum ShaderType {
-        SHADER_NONE,
-        SHADER_VERTEX,
-        SHADER_FRAGMENT,
-        SHADER_COMPUTE
-    };
-
-    static String parseShader(const MemoryInputStream& shader_stream, ShaderType shaderToExtract);
-    void setShaderProgram(const String& vertexShader, const String& fragmentShader);
+    void setShaderProgram();
 
     Rectangle<int> bounds;
     Draggable3DOrientation draggableOrientation;
-    bool doBackgroundDrawing = false;
     SmoothedValue<float, ValueSmoothingTypes::Linear> scale = 0.5f, rotationSpeed = 0.0f;
     CriticalSection mutex;
 
@@ -762,8 +751,7 @@ private:
         void timerCallback() override
         {
             stopTimer();
-            openGLComponent.setShaderProgram(vertexDocument.getAllContent(),
-                fragmentDocument.getAllContent());
+            openGLComponent.setShaderProgram();
         }
 
         OpenGLComponent& openGLComponent;
@@ -818,69 +806,72 @@ private:
     float rotation = 0.0f;
 
     juce::URL objFileURL = {};
-    std::unique_ptr<OpenGLShaderProgram> shader;
-    std::unique_ptr<OpenGLUtils::Shape> shape;
+    std::unique_ptr<OpenGLShaderProgram> roomShader;
+    std::unique_ptr<OpenGLUtils::Shape> roomShape;
     std::unique_ptr<OpenGLShaderProgram> microphoneShader;
     std::unique_ptr<OpenGLUtils::Shape> microphoneShape;
     std::unique_ptr<OpenGLShaderProgram> speakerShader;
     std::unique_ptr<OpenGLUtils::Shape> speakerShape;
+    std::unique_ptr<OpenGLShaderProgram> visualizationShader;
     std::shared_ptr<OpenGLUtils::Attributes> attributes;
     std::shared_ptr<OpenGLUtils::Uniforms> uniforms;
 
     CriticalSection shaderMutex;
-    String newVertexShader, newFragmentShader, statusText;
+    String statusText;
+    String newRoomVertexShader, newRoomFragmentShader;
     String newMicrophoneVertexShader, newMicrophoneFragmentShader;
     String newSpeakerVertexShader, newSpeakerFragmentShader;
+    String newVisualizationVertexShader, newVisualizationFragmentShader;
 
     void updateShader()
     {
         const ScopedLock lock(shaderMutex); // Prevent concurrent access to shader strings and status
 
-        if (newVertexShader.isNotEmpty() || newFragmentShader.isNotEmpty()) {
-            std::unique_ptr<OpenGLShaderProgram> newShader(new OpenGLShaderProgram(openGLContext));
+        if (newRoomVertexShader.isNotEmpty() || newRoomFragmentShader.isNotEmpty()) {
+            std::unique_ptr<OpenGLShaderProgram> newRoomShader(new OpenGLShaderProgram(openGLContext));
 
-            if (newShader->addVertexShader(OpenGLHelpers::translateVertexShaderToV3(newVertexShader))
-                && newShader->addFragmentShader(OpenGLHelpers::translateFragmentShaderToV3(newFragmentShader))
-                && newShader->link())
+            if (newRoomShader->addVertexShader(newRoomVertexShader)
+                && newRoomShader->addFragmentShader(newRoomFragmentShader)
+                && newRoomShader->link())
             {
-                shape.reset();
+                roomShape.reset();
                 attributes.reset();
                 uniforms.reset();
 
-                shader.reset(newShader.release());
-                shader->use();
+                roomShader.reset(newRoomShader.release());
+                roomShader->use();
 
 
                 if (objFileURL.isEmpty())
                 {
-                    shape.reset(new OpenGLUtils::Shape());
+                    roomShape.reset(new OpenGLUtils::Shape());
                 }
                 else
                 {
-                    shape.reset(new OpenGLUtils::Shape(objFileURL.getLocalFile()));
+                    roomShape.reset(new OpenGLUtils::Shape(objFileURL.getLocalFile()));
                 }
 
-                attributes.reset(new OpenGLUtils::Attributes(*shader));
-                uniforms.reset(new OpenGLUtils::Uniforms(*shader));
+                attributes.reset(new OpenGLUtils::Attributes(*roomShader));
+                uniforms.reset(new OpenGLUtils::Uniforms(*roomShader));
 
                 statusText = "GLSL: v" + String(OpenGLShaderProgram::getLanguageVersion(), 2);
             } else {
-                statusText = newShader->getLastError();
+                statusText = newRoomShader->getLastError();
             }
         }
 
         if (newMicrophoneVertexShader.isNotEmpty() || newMicrophoneFragmentShader.isNotEmpty()) {
-            std::unique_ptr<OpenGLShaderProgram> newmicrophoneShader(new OpenGLShaderProgram(openGLContext));
+            std::unique_ptr<OpenGLShaderProgram> newMicrophoneShader(new OpenGLShaderProgram(openGLContext));
 
-            if (newmicrophoneShader->addVertexShader(OpenGLHelpers::translateVertexShaderToV3(newMicrophoneVertexShader))
-                && newmicrophoneShader->addFragmentShader(OpenGLHelpers::translateFragmentShaderToV3(newMicrophoneFragmentShader))
-                && newmicrophoneShader->link())
+            if (newMicrophoneShader->addVertexShader(newMicrophoneVertexShader)
+                && newMicrophoneShader->addFragmentShader(newMicrophoneFragmentShader)
+                && newMicrophoneShader->link())
             {
                 microphoneShape.reset();
                 attributes.reset();
                 uniforms.reset();
 
-                microphoneShader.reset(newmicrophoneShader.release());
+                microphoneShader.reset(newMicrophoneShader.release());
                 microphoneShader->use();
 
                 auto headFileStream = new MemoryInputStream(BinaryData::head_obj, BinaryData::head_objSize, true);
@@ -890,15 +881,15 @@ private:
 
                 statusText = "GLSL: v" + String(OpenGLShaderProgram::getLanguageVersion(), 2);
             } else {
-                statusText = newmicrophoneShader->getLastError();
+                statusText = newMicrophoneShader->getLastError();
             }
         }
 
         if (newSpeakerVertexShader.isNotEmpty() || newSpeakerFragmentShader.isNotEmpty()) {
             std::unique_ptr<OpenGLShaderProgram> newSpeakerShader(new OpenGLShaderProgram(openGLContext));
 
-            if (newSpeakerShader->addVertexShader(OpenGLHelpers::translateVertexShaderToV3(newSpeakerVertexShader))
-                && newSpeakerShader->addFragmentShader(OpenGLHelpers::translateFragmentShaderToV3(newSpeakerFragmentShader))
+            if (newSpeakerShader->addVertexShader(newSpeakerVertexShader)
+                && newSpeakerShader->addFragmentShader(newSpeakerFragmentShader)
                 && newSpeakerShader->link())
             {
                 speakerShape.reset();
@@ -919,15 +910,40 @@ private:
             }
         }
 
+        if (newVisualizationVertexShader.isNotEmpty() || newVisualizationFragmentShader.isNotEmpty()) {
+            std::unique_ptr<OpenGLShaderProgram> newVisualizationShader(new OpenGLShaderProgram(openGLContext));
+
+            if (newVisualizationShader->addVertexShader(newVisualizationVertexShader)
+                && newVisualizationShader->addFragmentShader(newVisualizationFragmentShader)
+                && newVisualizationShader->link())
+            {
+                attributes.reset();
+                uniforms.reset();
+
+                visualizationShader.reset(newVisualizationShader.release());
+                visualizationShader->use();
+
+                attributes.reset(new OpenGLUtils::Attributes(*visualizationShader));
+                uniforms.reset(new OpenGLUtils::Uniforms(*visualizationShader));
+
+                statusText = "GLSL: v" + String(OpenGLShaderProgram::getLanguageVersion(), 2);
+            } else {
+                statusText = newVisualizationShader->getLastError();
+            }
+        }
+
         triggerAsyncUpdate();
 
-        newVertexShader = {};
-        newFragmentShader = {};
+        newRoomVertexShader = {};
+        newRoomFragmentShader = {};
 
         newMicrophoneVertexShader = {};
         newMicrophoneFragmentShader = {};
 
         newSpeakerVertexShader = {};
         newSpeakerFragmentShader = {};
+
+        newVisualizationVertexShader = {};
+        newVisualizationFragmentShader = {};
     }
 };
