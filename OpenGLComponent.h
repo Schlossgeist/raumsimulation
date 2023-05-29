@@ -643,8 +643,6 @@ private:
             presetLabel.attachToComponent(&presetBox, true);
 
             addAndMakeVisible(objFileLoadButton);
-            objFileLoadButton.setColour(TextButton::buttonColourId, Colour (0xff797fed));
-            objFileLoadButton.setColour(TextButton::textColourOffId, Colours::black);
             objFileLoadButton.onClick = [this] { openFile(); };
 
             objFileLabel.attachToComponent(&objFileLoadButton, false);

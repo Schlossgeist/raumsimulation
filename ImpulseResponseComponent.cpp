@@ -17,13 +17,9 @@ ImpulseResponseComponent::ImpulseResponseComponent(RaumsimulationAudioProcessor&
     formatManager.registerFormat(new WavAudioFormat(), false);
 
     addAndMakeVisible(irFileLoadButton);
-    irFileLoadButton.setColour(TextButton::buttonColourId, Colour (0xff797fed));
-    irFileLoadButton.setColour(TextButton::textColourOffId, Colours::black);
     irFileLoadButton.onClick = [this] { openFile(); };
 
     addAndMakeVisible(irFileSaveButton);
-    irFileSaveButton.setColour(TextButton::buttonColourId, Colour (0xff797fed));
-    irFileSaveButton.setColour(TextButton::textColourOffId, Colours::black);
     irFileSaveButton.onClick = [this] { saveFile(); };
 
     irFileLabel.attachToComponent(&irFileLoadButton, false);
@@ -35,8 +31,6 @@ ImpulseResponseComponent::ImpulseResponseComponent(RaumsimulationAudioProcessor&
 
     addAndMakeVisible(playPauseButton);
     playPauseButton.setButtonText("Play");
-    playPauseButton.setColour(TextButton::buttonColourId, Colour(0xff009900));
-    playPauseButton.setColour(TextButton::textColourOffId, Colours::black);
     playPauseButton.onClick = [this] { audioProcessor.playIR(); };
 
     setURL(irFileURL); // has to come after registering the audio formats
@@ -49,6 +43,8 @@ ImpulseResponseComponent::~ImpulseResponseComponent()
 
 void ImpulseResponseComponent::paint(juce::Graphics & g)
 {
+    g.setColour(getLookAndFeel().findColour(TextButton::buttonOnColourId));
+
     if (thumbnail.getTotalLength() > 0.0) {
         auto thumbArea = getLocalBounds().reduced(5);
         thumbArea.removeFromBottom(50);

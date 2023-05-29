@@ -90,7 +90,7 @@ void OpenGLComponent::renderOpenGL()
 
     auto desktopScale = (float)openGLContext.getRenderingScale();
 
-    OpenGLHelpers::clear(Colours::transparentBlack);
+    OpenGLHelpers::clear(getLookAndFeel().findColour(ResizableWindow::backgroundColourId));
 
     updateShader();   // Check whether we need to compile a new shader
 

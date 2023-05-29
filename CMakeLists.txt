@@ -70,6 +70,7 @@ juce_generate_juce_header(Raumsimulation)
 target_sources(Raumsimulation
     PRIVATE
         CustomDatatypes.h
+        CustomLookAndFeel.h
         DecibelSlider.h
         ImpulseResponseComponent.cpp
         ImpulseResponseComponent.h

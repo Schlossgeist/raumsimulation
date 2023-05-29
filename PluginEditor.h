@@ -8,6 +8,7 @@
 
 #pragma once
 
+#include "CustomLookAndFeel.h"
 #include "DecibelSlider.h"
 #include "ImpulseResponseComponent.h"
 #include "OpenGLComponent.h"
@@ -39,6 +40,8 @@ private:
     RaumsimulationAudioProcessor& audioProcessor;
 
     juce::AudioProcessorValueTreeState& parameterTreeState;
+
+    CustomLookAndFeel customLookAndFeel;
 
     TooltipWindow tooltipWindow{this, 100};
 

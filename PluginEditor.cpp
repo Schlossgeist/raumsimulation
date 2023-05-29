@@ -25,6 +25,8 @@ RaumsimulationAudioProcessorEditor::RaumsimulationAudioProcessorEditor(Raumsimul
     setSize (1200, 900);
     setResizable(true, false);
 
+    LookAndFeel::setDefaultLookAndFeel(&customLookAndFeel);
+
     addAndMakeVisible(openGLComponent);
     addAndMakeVisible(impulseResponseComponent);
 
@@ -37,38 +39,33 @@ RaumsimulationAudioProcessorEditor::RaumsimulationAudioProcessorEditor(Raumsimul
     gainAttachment.reset(new juce::AudioProcessorValueTreeState::SliderAttachment(parameterTreeState, "gain", gainSlider));
 
     addAndMakeVisible(generateIRButton);
-    generateIRButton.setColour(TextButton::buttonColourId, Colour (0xff797fed));
-    generateIRButton.setColour(TextButton::textColourOffId, Colours::black);
     generateIRButton.onClick = [this] { raytracer.launchThread(Thread::Priority::high); };
 
     addAndMakeVisible(generateLSButton);
-    generateLSButton.setColour(TextButton::buttonColourId, Colour (0xff797fed));
-    generateLSButton.setColour(TextButton::textColourOffId, Colours::black);
     generateLSButton.onClick = [this] { audioProcessor.ir.makeCopyOf(audioProcessor.generateLogarithmicSweep(20.0f, 20000.0f, 1.0f, audioProcessor.globalSampleRate, 2));
                                                impulseResponseComponent.updateThumbnail(audioProcessor.globalSampleRate); };
 
     settingsWindow.centreAroundComponent(this, settingsWindow.getWidth(), settingsWindow.getHeight());
+    settingsWindow.setBackgroundColour(getLookAndFeel().findColour(ResizableWindow::backgroundColourId));
     addAndMakeVisible(settingsButton);
     settingsButton.setImages(false,
                              true,
                              true,
                              ImageFileFormat::loadFrom(BinaryData::settings_FILL0_wght100_GRAD25_opsz48_png, BinaryData::settings_FILL0_wght100_GRAD25_opsz48_pngSize),
                              1.0f,
-                             Colours::white,
+                             getLookAndFeel().findColour(TextButton::textColourOffId),
                              ImageFileFormat::loadFrom(BinaryData::settings_FILL0_wght100_GRAD200_opsz48_png, BinaryData::settings_FILL0_wght100_GRAD200_opsz48_pngSize),
                              1.0f,
-                             Colours::white,
+                             getLookAndFeel().findColour(TextButton::textColourOffId),
                              ImageFileFormat::loadFrom(BinaryData::settings_FILL1_wght100_GRAD200_opsz48_png, BinaryData::settings_FILL1_wght100_GRAD200_opsz48_pngSize),
                              1.0f,
-                             Colours::white);
+                             getLookAndFeel().findColour(TextButton::textColourOffId));
     settingsButton.onClick = [this] { settingsWindow.setVisible(true); };
 
     addAndMakeVisible(objectMenu);
     objectMenu.onChange = [this] { populateObjectProperties(); };
 
     addAndMakeVisible(addObjectButton);
-    addObjectButton.setColour(TextButton::buttonColourId, Colour (0xff797fed));
-    addObjectButton.setColour(TextButton::textColourOffId, Colours::black);
     addObjectButton.onClick = [this] { for (const auto& object : raytracer.objects) {
                                                   if (object.name == nameEditor.getText()) {
                                                       nameEditor.setText(objectMenu.getText());
@@ -85,8 +82,6 @@ RaumsimulationAudioProcessorEditor::RaumsimulationAudioProcessorEditor(Raumsimul
                                               addObject(); };
 
     addAndMakeVisible(removeObjectButton);
-    removeObjectButton.setColour(TextButton::buttonColourId, Colour (0xff797fed));
-    removeObjectButton.setColour(TextButton::textColourOffId, Colours::black);
     removeObjectButton.onClick = [this] { removeObject(); };
 
     addAndMakeVisible(nameEditor);
