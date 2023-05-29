@@ -81,6 +81,8 @@ target_sources(Raumsimulation
         PluginProcessor.h
         Raytracer.cpp
         Raytracer.h
+        SettingsWindow.cpp
+        SettingsWindow.h
         WavefrontObjParser.h)
 
 # `target_compile_definitions` adds some preprocessor definitions to our target. In a Projucer
@@ -111,7 +113,11 @@ juce_add_binary_data(BinaryData SOURCES
         resources/shaders/raytracing.shader
         resources/models/raum001.obj
         resources/models/ball.obj
-        resources/models/head.obj)
+        resources/models/head.obj
+        resources/icon.png
+        resources/settings_FILL0_wght100_GRAD-25_opsz48.png
+        resources/settings_FILL0_wght100_GRAD200_opsz48.png
+        resources/settings_FILL1_wght100_GRAD200_opsz48.png)
 
 # `target_link_libraries` links libraries and JUCE modules to other libraries or executables. Here,
 # we're linking our executable target to the `juce::juce_audio_utils` module. Inter-module

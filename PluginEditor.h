@@ -8,12 +8,13 @@
 
 #pragma once
 
-#include <JuceHeader.h>
 #include "DecibelSlider.h"
-#include "PluginProcessor.h"
-#include "OpenGLComponent.h"
 #include "ImpulseResponseComponent.h"
+#include "OpenGLComponent.h"
+#include "PluginProcessor.h"
 #include "Raytracer.h"
+#include "SettingsWindow.h"
+#include <JuceHeader.h>
 
 //==============================================================================
 /**
@@ -39,19 +40,27 @@ private:
 
     juce::AudioProcessorValueTreeState& parameterTreeState;
 
+    TooltipWindow tooltipWindow{this, 100};
+
     juce::Label gainLabel{{}, "Gain"};
     DecibelSlider gainSlider;
     std::unique_ptr<juce::AudioProcessorValueTreeState::SliderAttachment> gainAttachment;
 
     OpenGLComponent openGLComponent;
     ImpulseResponseComponent impulseResponseComponent;
+    SettingsWindow settingsWindow;
 
     TextButton generateIRButton = {"Generate Impulse Response", {}};
     TextButton generateLSButton = {"Generate Logarithmic Sweep", {}};
 
+    ImageButton settingsButton{"Settings"};
+
     TextButton addObjectButton = {"Create", {}};
     TextButton removeObjectButton = {"Remove", {}};
     ComboBox objectMenu;
+
+    juce::Label nameEditorLabel{{}, "Name"};
+    TextEditor nameEditor;
 
     juce::Label activeToggleLabel{{}, "Active"};
     ToggleButton activeToggle;

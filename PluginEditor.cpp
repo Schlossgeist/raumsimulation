@@ -14,6 +14,7 @@
 RaumsimulationAudioProcessorEditor::RaumsimulationAudioProcessorEditor(RaumsimulationAudioProcessor& p, juce::AudioProcessorValueTreeState& pts)
     : AudioProcessorEditor(&p)
     , impulseResponseComponent(p, pts)
+    , settingsWindow(p, pts, "Settings", Colours::black, DocumentWindow::TitleBarButtons::closeButton, true)
     , audioProcessor(p)
     , parameterTreeState(pts)
     , raytracer(p, pts, impulseResponseComponent, "Generating Impulse Response...", true, true, 1000, "Cancel", this->getParentComponent())
@@ -46,18 +47,60 @@ RaumsimulationAudioProcessorEditor::RaumsimulationAudioProcessorEditor(Raumsimul
     generateLSButton.onClick = [this] { audioProcessor.ir.makeCopyOf(audioProcessor.generateLogarithmicSweep(20.0f, 20000.0f, 1.0f, audioProcessor.globalSampleRate, 2));
                                                impulseResponseComponent.updateThumbnail(audioProcessor.globalSampleRate); };
 
+    settingsWindow.centreAroundComponent(this, settingsWindow.getWidth(), settingsWindow.getHeight());
+    addAndMakeVisible(settingsButton);
+    settingsButton.setImages(false,
+                             true,
+                             true,
+                             ImageFileFormat::loadFrom(BinaryData::settings_FILL0_wght100_GRAD25_opsz48_png, BinaryData::settings_FILL0_wght100_GRAD25_opsz48_pngSize),
+                             1.0f,
+                             Colours::white,
+                             ImageFileFormat::loadFrom(BinaryData::settings_FILL0_wght100_GRAD200_opsz48_png, BinaryData::settings_FILL0_wght100_GRAD200_opsz48_pngSize),
+                             1.0f,
+                             Colours::white,
+                             ImageFileFormat::loadFrom(BinaryData::settings_FILL1_wght100_GRAD200_opsz48_png, BinaryData::settings_FILL1_wght100_GRAD200_opsz48_pngSize),
+                             1.0f,
+                             Colours::white);
+    settingsButton.onClick = [this] { settingsWindow.setVisible(true); };
+
     addAndMakeVisible(objectMenu);
     objectMenu.onChange = [this] { populateObjectProperties(); };
 
     addAndMakeVisible(addObjectButton);
     addObjectButton.setColour(TextButton::buttonColourId, Colour (0xff797fed));
     addObjectButton.setColour(TextButton::textColourOffId, Colours::black);
-    addObjectButton.onClick = [this] { addObject(); };
+    addObjectButton.onClick = [this] { for (const auto& object : raytracer.objects) {
+                                                  if (object.name == nameEditor.getText()) {
+                                                      nameEditor.setText(objectMenu.getText());
+
+                                                      juce::AlertWindow::showAsync(MessageBoxOptions()
+                                                                                   .withTitle("Error")
+                                                                                   .withMessage("An object with this name already exists. Please choose a different name.")
+                                                                                   .withIconType(MessageBoxIconType::WarningIcon)
+                                                                                   .withButton("Ok")
+                                                                                           , nullptr);
+                                                      return;
+                                                  }
+                                              }
+                                              addObject(); };
 
     addAndMakeVisible(removeObjectButton);
     removeObjectButton.setColour(TextButton::buttonColourId, Colour (0xff797fed));
     removeObjectButton.setColour(TextButton::textColourOffId, Colours::black);
     removeObjectButton.onClick = [this] { removeObject(); };
+
+    addAndMakeVisible(nameEditor);
+    nameEditor.onFocusLost = [this] { nameEditor.setText(objectMenu.getText()); };
+    nameEditor.onReturnKey = [this] { for (const auto& object : raytracer.objects) {
+                                                  if (object.name == nameEditor.getText()) {
+                                                      nameEditor.setText(objectMenu.getText());
+                                                      return;
+                                                  }
+                                              }
+
+                                              updateObjectProperties();
+                                              populateObjectMenu(); };
+    nameEditorLabel.attachToComponent(&nameEditor, true);
 
     addAndMakeVisible(activeToggle);
     activeToggle.onStateChange = [this] { updateObjectProperties(); };
@@ -134,27 +177,36 @@ void RaumsimulationAudioProcessorEditor::resized()
     generateLSButton.           setBounds(0, 4*height/6, width/2, 1*height/6);
     impulseResponseComponent.   setBounds(0, 5*height/6, width/2, 1*height/6);
 
-    objectMenu.                 setBounds(2*width/4, 0*height/12, 2*width/4, 1*height/12);
-    addObjectButton.            setBounds(2*width/4, 1*height/12, 1*width/4, 1*height/12);
-    removeObjectButton.         setBounds(3*width/4, 1*height/12, 1*width/4, 1*height/12);
+    settingsButton.             setBounds(7*width/8, 0*height/12, 32, 32);
+    objectMenu.                 setBounds(4*width/8, 0*height/12, 3*width/8, 1*height/12);
+    addObjectButton.            setBounds(4*width/8, 1*height/12, 2*width/8, 1*height/12);
+    removeObjectButton.         setBounds(6*width/8, 1*height/12, 2*width/8, 1*height/12);
 
-    activeToggle.               setBounds(4*width/6, 2*height/12, 1*width/6, 1*height/12);
-    typeMenu.                   setBounds(5*width/6, 2*height/12, 1*width/6, 1*height/12);
+    nameEditor.                 setBounds(3*width/4, 2*height/12, 2*width/4, 1*height/12);
 
-    xPositionSlider.            setBounds(3*width/6, 4*height/12, 1*width/6, 1*height/12);
-    yPositionSlider.            setBounds(4*width/6, 4*height/12, 1*width/6, 1*height/12);
-    zPositionSlider.            setBounds(5*width/6, 4*height/12, 1*width/6, 1*height/12);
+    activeToggle.               setBounds(4*width/6, 3*height/12, 1*width/6, 1*height/12);
+    typeMenu.                   setBounds(5*width/6, 3*height/12, 1*width/6, 1*height/12);
 
-    xRotationSlider.            setBounds(3*width/6, 6*height/12, 1*width/6, 1*height/12);
-    yRotationSlider.            setBounds(4*width/6, 6*height/12, 1*width/6, 1*height/12);
-    zRotationSlider.            setBounds(5*width/6, 6*height/12, 1*width/6, 1*height/12);
+    xPositionSlider.            setBounds(3*width/6, 5*height/12, 1*width/6, 1*height/12);
+    yPositionSlider.            setBounds(4*width/6, 5*height/12, 1*width/6, 1*height/12);
+    zPositionSlider.            setBounds(5*width/6, 5*height/12, 1*width/6, 1*height/12);
+
+    xRotationSlider.            setBounds(3*width/6, 8*height/12, 1*width/6, 1*height/12);
+    yRotationSlider.            setBounds(4*width/6, 8*height/12, 1*width/6, 1*height/12);
+    zRotationSlider.            setBounds(5*width/6, 8*height/12, 1*width/6, 1*height/12);
 
     gainSlider.setBounds(width - 75, height - 75, 75, 75);
 }
 
 void RaumsimulationAudioProcessorEditor::addObject()
 {
+    Raytracer::Object newObject;
+    newObject.name = nameEditor.getText();
+    newObject.position = {xPositionSlider.getValue(), yPositionSlider.getValue(), zPositionSlider.getValue()};
+    newObject.active = activeToggle.getToggleState();
+    newObject.type = static_cast<Raytracer::Object::Type>(typeMenu.getSelectedId());
 
+    raytracer.objects.push_back(newObject);
 }
 
 void RaumsimulationAudioProcessorEditor::removeObject()
@@ -182,6 +234,7 @@ void RaumsimulationAudioProcessorEditor::populateObjectProperties()
     if (objectMenu.getSelectedId() != 0) {
         for (const auto& object : raytracer.objects) {
             if (object.name == objectMenu.getText()) {
+                nameEditor.setText(object.name, false);
                 activeToggle.setToggleState(object.active, NotificationType::dontSendNotification);
                 typeMenu.setSelectedId(object.type);
 
@@ -198,6 +251,7 @@ void RaumsimulationAudioProcessorEditor::updateObjectProperties()
     if (objectMenu.getSelectedId() != 0) {
         for (auto& object : raytracer.objects) {
             if (object.name == objectMenu.getText()) {
+                object.name = nameEditor.getText();
                 object.active = activeToggle.getToggleState();
                 object.type = static_cast<Raytracer::Object::Type>(typeMenu.getSelectedId());
 

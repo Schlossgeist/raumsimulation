@@ -89,6 +89,12 @@ private:
                       {
                               { "Setting", {{ "id", "ir_file_url" },     { "value", "" }}}
                       }
+                     },
+                     { "SettingsGroup", {{ "name", "Raytracer Settings" }},
+                      {
+                              { "Setting", {{ "id", "rays_per_source" },     { "value", 1000.0 }}},
+                              { "Setting", {{ "id", "points_in_visualizer" },     { "value", 50.0 }}}
+                      }
                      }
              }
             };
