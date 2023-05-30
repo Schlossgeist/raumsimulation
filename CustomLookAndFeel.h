@@ -188,6 +188,12 @@ public:
                             FileBrowserComponent::currentPathBoxArrowColourId,         colourScheme.getUIColour (ColourScheme::UIColour::menuText).getARGB(),
                             FileBrowserComponent::filenameBoxBackgroundColourId,       colourScheme.getUIColour (ColourScheme::UIColour::menuBackground).getARGB(),
                             FileBrowserComponent::filenameBoxTextColourId,             colourScheme.getUIColour (ColourScheme::UIColour::menuText).getARGB(),
+
+                            // CUSTOM IDS
+
+                            0x0000000, /*AudioThumbnail::waveformColourId*/             colourScheme.getUIColour (ColourScheme::UIColour::highlightedFill).getARGB(),
+                            0x0000001, /*AudioThumbnail::lineColourId*/                 colourScheme.getUIColour (ColourScheme::UIColour::defaultFill).getARGB(),
+                            0x0000002, /*AudioThumbnail::labelColourId*/                colourScheme.getUIColour (ColourScheme::UIColour::defaultText).getARGB(),
                     };
 
             for (int i = 0; i < numElementsInArray(coloursToUse); i += 2)

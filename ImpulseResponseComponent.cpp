@@ -43,14 +43,29 @@ ImpulseResponseComponent::~ImpulseResponseComponent()
 
 void ImpulseResponseComponent::paint(juce::Graphics & g)
 {
-    g.setColour(getLookAndFeel().findColour(TextButton::buttonOnColourId));
-
     if (thumbnail.getTotalLength() > 0.0) {
         auto thumbArea = getLocalBounds().reduced(5);
         thumbArea.removeFromBottom(50);
 
+        double ms = 0.0f;
+        double numberOfLines = 7.0f;
+        double stepMS = thumbnail.getTotalLength() * 1000.0f / numberOfLines;
+        double roundedStep = floor((stepMS + 50.0f) / 100.0f) * 100.0f;
+        while (ms < thumbnail.getTotalLength() * 1000.0f) {
+            g.setColour(getLookAndFeel().findColour(0x0000002));
+            g.setFont(8.0f);
+            g.drawText(String(ms) + " ms", thumbArea.getX() + (int) ms + 3, thumbArea.getY(), 25.0f, 10.0f, Justification::centredLeft, false);
+
+            g.setColour(getLookAndFeel().findColour(0x0000001));
+            g.fillRect((float) (thumbArea.getX() + ms),(float) thumbArea.getY(), 1.0f,(float) thumbArea.getHeight());
+
+            ms += roundedStep;
+        }
+
+        g.setColour(getLookAndFeel().findColour(0x0000000));
         thumbnail.drawChannels(g, thumbArea, 0, thumbnail.getTotalLength(), 1.0f);
     } else {
+        g.setColour(getLookAndFeel().findColour(TextButton::textColourOffId));
         g.setFont(14.0f);
         g.drawFittedText("No audio file selected", getLocalBounds(), Justification::centred, 2);
     }
