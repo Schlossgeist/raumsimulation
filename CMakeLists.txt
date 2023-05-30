@@ -74,6 +74,8 @@ target_sources(Raumsimulation
         DecibelSlider.h
         ImpulseResponseComponent.cpp
         ImpulseResponseComponent.h
+        ObjectWindow.cpp
+        ObjectWindow.h
         OpenGLComponent.cpp
         OpenGLComponent.h
         PluginEditor.cpp
@@ -116,9 +118,18 @@ juce_add_binary_data(BinaryData SOURCES
         resources/models/ball.obj
         resources/models/head.obj
         resources/icon.png
-        resources/settings_FILL0_wght100_GRAD-25_opsz48.png
-        resources/settings_FILL0_wght100_GRAD200_opsz48.png
-        resources/settings_FILL1_wght100_GRAD200_opsz48.png)
+        resources/icons/add_circle_FILL0_wght100_GRAD-25_opsz48.svg
+        resources/icons/add_circle_FILL0_wght100_GRAD200_opsz48.svg
+        resources/icons/add_circle_FILL1_wght100_GRAD200_opsz48.svg
+        resources/icons/delete_FILL0_wght100_GRAD-25_opsz48.svg
+        resources/icons/delete_FILL0_wght100_GRAD200_opsz48.svg
+        resources/icons/delete_FILL1_wght100_GRAD200_opsz48.svg
+        resources/icons/edit_FILL0_wght100_GRAD-25_opsz48.svg
+        resources/icons/edit_FILL0_wght100_GRAD200_opsz48.svg
+        resources/icons/edit_FILL1_wght100_GRAD200_opsz48.svg
+        resources/icons/settings_FILL0_wght100_GRAD-25_opsz48.svg
+        resources/icons/settings_FILL0_wght100_GRAD200_opsz48.svg
+        resources/icons/settings_FILL1_wght100_GRAD200_opsz48.svg)
 
 # `target_link_libraries` links libraries and JUCE modules to other libraries or executables. Here,
 # we're linking our executable target to the `juce::juce_audio_utils` module. Inter-module

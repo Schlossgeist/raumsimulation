@@ -11,6 +11,7 @@
 #include "CustomLookAndFeel.h"
 #include "DecibelSlider.h"
 #include "ImpulseResponseComponent.h"
+#include "ObjectWindow.h"
 #include "OpenGLComponent.h"
 #include "PluginProcessor.h"
 #include "Raytracer.h"
@@ -20,7 +21,7 @@
 //==============================================================================
 /**
 */
-class RaumsimulationAudioProcessorEditor  : public juce::AudioProcessorEditor
+class RaumsimulationAudioProcessorEditor : public juce::AudioProcessorEditor
 {
 public:
     RaumsimulationAudioProcessorEditor(RaumsimulationAudioProcessor&, juce::AudioProcessorValueTreeState&);
@@ -31,12 +32,6 @@ public:
     void resized() override;
 
 private:
-    void addObject();
-    void removeObject();
-    void populateObjectMenu();
-    void populateObjectProperties();
-    void updateObjectProperties();
-
     RaumsimulationAudioProcessor& audioProcessor;
 
     juce::AudioProcessorValueTreeState& parameterTreeState;
@@ -45,43 +40,20 @@ private:
 
     TooltipWindow tooltipWindow{this, 100};
 
-    juce::Label gainLabel{{}, "Gain"};
     DecibelSlider gainSlider;
     std::unique_ptr<juce::AudioProcessorValueTreeState::SliderAttachment> gainAttachment;
 
     OpenGLComponent openGLComponent;
     ImpulseResponseComponent impulseResponseComponent;
-    SettingsWindow settingsWindow;
+    SettingsWindow settingsWindow{audioProcessor, parameterTreeState, "Settings", Colours::black, DocumentWindow::TitleBarButtons::closeButton, true};
+    ObjectWindow objectWindow{audioProcessor, parameterTreeState, raytracer, "Object", Colours::black, DocumentWindow::TitleBarButtons::closeButton, true};
 
     TextButton generateIRButton = {"Generate Impulse Response", {}};
     TextButton generateLSButton = {"Generate Logarithmic Sweep", {}};
 
-    ImageButton settingsButton{"Settings"};
-
-    TextButton addObjectButton = {"Create", {}};
-    TextButton removeObjectButton = {"Remove", {}};
-    ComboBox objectMenu;
-
-    juce::Label nameEditorLabel{{}, "Name"};
-    TextEditor nameEditor;
-
-    juce::Label activeToggleLabel{{}, "Active"};
-    ToggleButton activeToggle;
-    ComboBox typeMenu;
-
-    juce::Label xPositionLabel{{}, "X Position"};
-    Slider      xPositionSlider;
-    juce::Label yPositionLabel{{}, "Y Position"};
-    Slider      yPositionSlider;
-    juce::Label zPositionLabel{{}, "Z Position"};
-    Slider      zPositionSlider;
-
-    juce::Label xRotationLabel{{}, "X Rotation"};
-    Slider      xRotationSlider;
-    juce::Label yRotationLabel{{}, "Y Rotation"};
-    Slider      yRotationSlider;
-    juce::Label zRotationLabel{{}, "Z Rotation"};
-    Slider      zRotationSlider;
+    DrawableButton settingsButton{"Settings", juce::DrawableButton::ImageOnButtonBackground};
+    DrawableButton addObjectButton{"Add object", juce::DrawableButton::ImageOnButtonBackground};
+    DrawableButton editObjectButton{"Edit object", juce::DrawableButton::ImageOnButtonBackground};
 
     Raytracer raytracer;
 
