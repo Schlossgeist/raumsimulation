@@ -117,86 +117,80 @@ void OpenGLComponent::renderOpenGL()
 
     roomShader->use();
 
-    if (uniforms->projectionMatrix != nullptr)
-        uniforms->projectionMatrix->setMatrix4(getProjectionMatrix().mat, 1, false);
+    if (roomUniforms->projectionMatrix != nullptr)
+        roomUniforms->projectionMatrix->setMatrix4(getProjectionMatrix().mat, 1, false);
 
-    if (uniforms->viewMatrix != nullptr)
-        uniforms->viewMatrix->setMatrix4(getViewMatrix().mat, 1, false);
+    if (roomUniforms->viewMatrix != nullptr)
+        roomUniforms->viewMatrix->setMatrix4(getViewMatrix().mat, 1, false);
 
-    if (uniforms->positionMatrix != nullptr)
-        uniforms->positionMatrix->setMatrix4(Matrix3D<float>().mat, 1, false);
+    if (roomUniforms->positionMatrix != nullptr)
+        roomUniforms->positionMatrix->setMatrix4(Matrix3D<float>().mat, 1, false);
 
-    if (uniforms->rotationMatrix != nullptr)
-        uniforms->rotationMatrix->setMatrix4(Matrix3D<float>().mat, 1, false);
+    if (roomUniforms->rotationMatrix != nullptr)
+        roomUniforms->rotationMatrix->setMatrix4(Matrix3D<float>().mat, 1, false);
 
-    roomShape->draw(*attributes);
+    roomShape->draw(*roomAttributes);
 
     glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
 
     for (const auto& object : raytracer.objects) {
         if (object.type == Raytracer::Object::MICROPHONE && object.active) {
-            auto microphoneMatrix = Matrix3D<float>(1.0f, 0.0f, 0.0f, 0.0f,
-                                                    0.0f, 1.0f, 0.0f, 0.0f,
-                                                    0.0f, 0.0f, 1.0f, 0.0f,
-                                                    object.position.x, object.position.y, object.position.z, 1.0f);
+            auto microphoneMatrix = glm::translate(glm::mat4(1.0f), object.position);
 
             microphoneShader->use();
 
-            if (uniforms->projectionMatrix != nullptr)
-                uniforms->projectionMatrix->setMatrix4(getProjectionMatrix().mat, 1, false);
+            if (microphoneUniforms->projectionMatrix != nullptr)
+                microphoneUniforms->projectionMatrix->setMatrix4(getProjectionMatrix().mat, 1, false);
 
-            if (uniforms->viewMatrix != nullptr)
-                uniforms->viewMatrix->setMatrix4(getViewMatrix().mat, 1, false);
+            if (microphoneUniforms->viewMatrix != nullptr)
+                microphoneUniforms->viewMatrix->setMatrix4(getViewMatrix().mat, 1, false);
 
-            if (uniforms->positionMatrix != nullptr)
-                uniforms->positionMatrix->setMatrix4(microphoneMatrix.mat, 1, false);
+            if (microphoneUniforms->positionMatrix != nullptr)
+                microphoneUniforms->positionMatrix->setMatrix4(glm::value_ptr(microphoneMatrix), 1, false);
 
-            if (uniforms->rotationMatrix != nullptr)
-                uniforms->rotationMatrix->setMatrix4(Matrix3D<float>().mat, 1, false);
+            if (microphoneUniforms->rotationMatrix != nullptr)
+                microphoneUniforms->rotationMatrix->setMatrix4(Matrix3D<float>().mat, 1, false);
 
-            microphoneShape->draw(*attributes);
+            microphoneShape->draw(*microphoneAttributes);
         }
     }
 
 
     for (const auto& object : raytracer.objects) {
         if (object.type == Raytracer::Object::SPEAKER && object.active) {
-            auto speakerMatrix = Matrix3D<float>(1.0f, 0.0f, 0.0f, 0.0f,
-                                                    0.0f, 1.0f, 0.0f, 0.0f,
-                                                    0.0f, 0.0f, 1.0f, 0.0f,
-                                                 object.position.x, object.position.y, object.position.z, 1.0f);
+            auto speakerMatrix = glm::translate(glm::mat4(1.0f), object.position);
 
             speakerShader->use();
 
-            if (uniforms->projectionMatrix != nullptr)
-                uniforms->projectionMatrix->setMatrix4(getProjectionMatrix().mat, 1, false);
+            if (speakerUniforms->projectionMatrix != nullptr)
+                speakerUniforms->projectionMatrix->setMatrix4(getProjectionMatrix().mat, 1, false);
 
-            if (uniforms->viewMatrix != nullptr)
-                uniforms->viewMatrix->setMatrix4(getViewMatrix().mat, 1, false);
+            if (speakerUniforms->viewMatrix != nullptr)
+                speakerUniforms->viewMatrix->setMatrix4(getViewMatrix().mat, 1, false);
 
-            if (uniforms->positionMatrix != nullptr)
-                uniforms->positionMatrix->setMatrix4(speakerMatrix.mat, 1 ,false);
+            if (speakerUniforms->positionMatrix != nullptr)
+                speakerUniforms->positionMatrix->setMatrix4(glm::value_ptr(speakerMatrix), 1 ,false);
 
-            if (uniforms->rotationMatrix != nullptr)
-                uniforms->rotationMatrix->setMatrix4(Matrix3D<float>().mat, 1, false);
+            if (speakerUniforms->rotationMatrix != nullptr)
+                speakerUniforms->rotationMatrix->setMatrix4(Matrix3D<float>().mat, 1, false);
 
-            speakerShape->draw(*attributes);
+            speakerShape->draw(*speakerAttributes);
         }
     }
 
     visualizationShader->use();
 
-    if (uniforms->projectionMatrix != nullptr)
-        uniforms->projectionMatrix->setMatrix4(getProjectionMatrix().mat, 1, false);
+    if (visualizationUniforms->projectionMatrix != nullptr)
+        visualizationUniforms->projectionMatrix->setMatrix4(getProjectionMatrix().mat, 1, false);
 
-    if (uniforms->viewMatrix != nullptr)
-        uniforms->viewMatrix->setMatrix4(getViewMatrix().mat, 1, false);
+    if (visualizationUniforms->viewMatrix != nullptr)
+        visualizationUniforms->viewMatrix->setMatrix4(getViewMatrix().mat, 1, false);
 
-    if (uniforms->positionMatrix != nullptr)
-        uniforms->positionMatrix->setMatrix4(Matrix3D<float>().mat, 1 ,false);
+    if (visualizationUniforms->positionMatrix != nullptr)
+        visualizationUniforms->positionMatrix->setMatrix4(Matrix3D<float>().mat, 1 ,false);
 
-    if (uniforms->rotationMatrix != nullptr)
-        uniforms->rotationMatrix->setMatrix4(Matrix3D<float>().mat, 1, false);
+    if (visualizationUniforms->rotationMatrix != nullptr)
+        visualizationUniforms->rotationMatrix->setMatrix4(Matrix3D<float>().mat, 1, false);
 
     struct VertexBuffer
     {
@@ -254,9 +248,9 @@ void OpenGLComponent::renderOpenGL()
 
     glPointSize(3);
 
-    attributes->enable();
+    visualizationAttributes->enable();
     glDrawElements(GL_POINTS, secondarySourcesVertexBuffer.size, GL_UNSIGNED_INT, nullptr);
-    attributes->disable();
+    visualizationAttributes->disable();
 
 
     // Reset the element buffers so child Components draw correctly
@@ -302,10 +296,12 @@ void OpenGLComponent::setShaderProgram()
 
                uniform mat4 projectionMatrix;
                uniform mat4 viewMatrix;
+               uniform mat4 positionMatrix;
+               uniform mat4 rotationMatrix;
 
                void main()
                {
-                   gl_Position = projectionMatrix * viewMatrix * position;
+                   gl_Position = projectionMatrix * viewMatrix * positionMatrix * rotationMatrix * position;
                }
             )";
     newRoomFragmentShader =
@@ -329,7 +325,7 @@ void OpenGLComponent::setShaderProgram()
 
                void main()
                {
-                   gl_Position = projectionMatrix * viewMatrix * position;
+                   gl_Position = projectionMatrix * viewMatrix * positionMatrix * rotationMatrix * position;
                }
             )";
 
@@ -354,7 +350,7 @@ void OpenGLComponent::setShaderProgram()
 
                void main()
                {
-                   gl_Position = projectionMatrix * viewMatrix * position;
+                   gl_Position = projectionMatrix * viewMatrix * positionMatrix * rotationMatrix * position;
                }
             )";
 
@@ -383,7 +379,7 @@ void OpenGLComponent::setShaderProgram()
                void main()
                {
                    destinationColor = sourceColor;
-                   gl_Position = projectionMatrix * viewMatrix * position;
+                   gl_Position = projectionMatrix * viewMatrix * positionMatrix * rotationMatrix * position;
                }
             )";
     newVisualizationFragmentShader =

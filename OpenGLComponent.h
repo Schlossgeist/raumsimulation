@@ -7,12 +7,6 @@
 
 struct OpenGLUtils
 {
-    //==============================================================================
-    /** Vertex data to be passed to the shaders.
-        For the purposes of this demo, each vertex will have a 3D position, a colour and a
-        2D texture co-ordinate. Of course you can ignore these or manipulate them in the
-        shader programs but are some useful defaults to work from.
-     */
     struct Vertex
     {
         float position[3];
@@ -20,8 +14,6 @@ struct OpenGLUtils
         float color[4];
     };
 
-    //==============================================================================
-    // This class just manages the attributes that the demo shaders use.
     struct Attributes
     {
         explicit Attributes(OpenGLShaderProgram& shader)
@@ -77,8 +69,6 @@ struct OpenGLUtils
         }
     };
 
-    //==============================================================================
-    // This class just manages the uniform values that the demo shaders use.
     struct Uniforms
     {
         explicit Uniforms(OpenGLShaderProgram& shader)
@@ -104,10 +94,6 @@ struct OpenGLUtils
         }
     };
 
-    //==============================================================================
-    /** This loads a 3D model from an OBJ file and converts it into some vertex buffers
-        that we can draw.
-    */
     struct Shape
     {
         Shape()
@@ -549,10 +535,6 @@ struct OpenGLUtils
     }
 };
 
-//==============================================================================
-/** This is the main component - the GL context gets attached to it, and
-    it implements the OpenGLRenderer callback so that it can do real GL work.
-*/
 class OpenGLComponent: public juce::Component,
                        public juce::OpenGLRenderer,
                        private juce::AsyncUpdater
@@ -595,11 +577,6 @@ private:
     juce::AudioProcessorValueTreeState& parameters;
     Raytracer& raytracer;
 
-    //==============================================================================
-    /**
-        This component sits on top of the main GL demo, and contains all the sliders
-        and widgets that control things.
-    */
     class ControlsOverlay : public Component,
                             private Timer
     {
@@ -787,15 +764,21 @@ private:
     float rotation = 0.0f;
 
     juce::URL objFileURL = {};
-    std::unique_ptr<OpenGLShaderProgram> roomShader;
-    std::unique_ptr<OpenGLUtils::Shape> roomShape;
-    std::unique_ptr<OpenGLShaderProgram> microphoneShader;
-    std::unique_ptr<OpenGLUtils::Shape> microphoneShape;
-    std::unique_ptr<OpenGLShaderProgram> speakerShader;
-    std::unique_ptr<OpenGLUtils::Shape> speakerShape;
-    std::unique_ptr<OpenGLShaderProgram> visualizationShader;
-    std::shared_ptr<OpenGLUtils::Attributes> attributes;
-    std::shared_ptr<OpenGLUtils::Uniforms> uniforms;
+    std::unique_ptr<OpenGLShaderProgram>        roomShader;
+    std::unique_ptr<OpenGLUtils::Shape>         roomShape;
+    std::shared_ptr<OpenGLUtils::Attributes>    roomAttributes;
+    std::shared_ptr<OpenGLUtils::Uniforms>      roomUniforms;
+    std::unique_ptr<OpenGLShaderProgram>        microphoneShader;
+    std::unique_ptr<OpenGLUtils::Shape>         microphoneShape;
+    std::shared_ptr<OpenGLUtils::Attributes>    microphoneAttributes;
+    std::shared_ptr<OpenGLUtils::Uniforms>      microphoneUniforms;
+    std::unique_ptr<OpenGLShaderProgram>        speakerShader;
+    std::unique_ptr<OpenGLUtils::Shape>         speakerShape;
+    std::shared_ptr<OpenGLUtils::Attributes>    speakerAttributes;
+    std::shared_ptr<OpenGLUtils::Uniforms>      speakerUniforms;
+    std::unique_ptr<OpenGLShaderProgram>        visualizationShader;
+    std::shared_ptr<OpenGLUtils::Attributes>    visualizationAttributes;
+    std::shared_ptr<OpenGLUtils::Uniforms>      visualizationUniforms;
 
     CriticalSection shaderMutex;
     String statusText;
@@ -816,8 +799,8 @@ private:
                 && newRoomShader->link())
             {
                 roomShape.reset();
-                attributes.reset();
-                uniforms.reset();
+                roomAttributes.reset();
+                roomUniforms.reset();
 
                 roomShader.reset(newRoomShader.release());
                 roomShader->use();
@@ -832,12 +815,34 @@ private:
                     roomShape.reset(new OpenGLUtils::Shape(objFileURL.getLocalFile()));
                 }
 
-                attributes.reset(new OpenGLUtils::Attributes(*roomShader));
-                uniforms.reset(new OpenGLUtils::Uniforms(*roomShader));
+                roomAttributes.reset(new OpenGLUtils::Attributes(*roomShader));
+                roomUniforms.reset(new OpenGLUtils::Uniforms(*roomShader));
 
                 statusText = "GLSL: v" + String(OpenGLShaderProgram::getLanguageVersion(), 2);
             } else {
                 statusText = newRoomShader->getLastError();
+            }
+        }
+
+        if (newVisualizationVertexShader.isNotEmpty() || newVisualizationFragmentShader.isNotEmpty()) {
+            std::unique_ptr<OpenGLShaderProgram> newVisualizationShader(new OpenGLShaderProgram(openGLContext));
+
+            if (newVisualizationShader->addVertexShader(newVisualizationVertexShader)
+                && newVisualizationShader->addFragmentShader(newVisualizationFragmentShader)
+                && newVisualizationShader->link())
+            {
+                visualizationAttributes.reset();
+                visualizationUniforms.reset();
+
+                visualizationShader.reset(newVisualizationShader.release());
+                visualizationShader->use();
+
+                visualizationAttributes.reset(new OpenGLUtils::Attributes(*visualizationShader));
+                visualizationUniforms.reset(new OpenGLUtils::Uniforms(*visualizationShader));
+
+                statusText = "GLSL: v" + String(OpenGLShaderProgram::getLanguageVersion(), 2);
+            } else {
+                statusText = newVisualizationShader->getLastError();
             }
         }
 
@@ -849,16 +854,16 @@ private:
                 && newMicrophoneShader->link())
             {
                 microphoneShape.reset();
-                attributes.reset();
-                uniforms.reset();
+                microphoneAttributes.reset();
+                microphoneUniforms.reset();
 
                 microphoneShader.reset(newMicrophoneShader.release());
                 microphoneShader->use();
 
                 auto headFileStream = new MemoryInputStream(BinaryData::head_obj, BinaryData::head_objSize, true);
                 microphoneShape.reset(new OpenGLUtils::Shape(String(CharPointer_UTF8((const char*) headFileStream->getData()))));
-                attributes.reset(new OpenGLUtils::Attributes(*microphoneShader));
-                uniforms.reset(new OpenGLUtils::Uniforms(*microphoneShader));
+                microphoneAttributes.reset(new OpenGLUtils::Attributes(*microphoneShader));
+                microphoneUniforms.reset(new OpenGLUtils::Uniforms(*microphoneShader));
 
                 statusText = "GLSL: v" + String(OpenGLShaderProgram::getLanguageVersion(), 2);
             } else {
@@ -874,42 +879,20 @@ private:
                 && newSpeakerShader->link())
             {
                 speakerShape.reset();
-                attributes.reset();
-                uniforms.reset();
+                speakerAttributes.reset();
+                speakerUniforms.reset();
 
                 speakerShader.reset(newSpeakerShader.release());
                 speakerShader->use();
 
                 auto ballFileStream = new MemoryInputStream(BinaryData::ball_obj, BinaryData::ball_objSize, true);
                 speakerShape.reset(new OpenGLUtils::Shape(String(CharPointer_UTF8((const char*) ballFileStream->getData()))));
-                attributes.reset(new OpenGLUtils::Attributes(*speakerShader));
-                uniforms.reset(new OpenGLUtils::Uniforms(*speakerShader));
+                speakerAttributes.reset(new OpenGLUtils::Attributes(*speakerShader));
+                speakerUniforms.reset(new OpenGLUtils::Uniforms(*speakerShader));
 
                 statusText = "GLSL: v" + String(OpenGLShaderProgram::getLanguageVersion(), 2);
             } else {
                 statusText = newSpeakerShader->getLastError();
-            }
-        }
-
-        if (newVisualizationVertexShader.isNotEmpty() || newVisualizationFragmentShader.isNotEmpty()) {
-            std::unique_ptr<OpenGLShaderProgram> newVisualizationShader(new OpenGLShaderProgram(openGLContext));
-
-            if (newVisualizationShader->addVertexShader(newVisualizationVertexShader)
-                && newVisualizationShader->addFragmentShader(newVisualizationFragmentShader)
-                && newVisualizationShader->link())
-            {
-                attributes.reset();
-                uniforms.reset();
-
-                visualizationShader.reset(newVisualizationShader.release());
-                visualizationShader->use();
-
-                attributes.reset(new OpenGLUtils::Attributes(*visualizationShader));
-                uniforms.reset(new OpenGLUtils::Uniforms(*visualizationShader));
-
-                statusText = "GLSL: v" + String(OpenGLShaderProgram::getLanguageVersion(), 2);
-            } else {
-                statusText = newVisualizationShader->getLastError();
             }
         }
 
