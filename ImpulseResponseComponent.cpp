@@ -50,7 +50,7 @@ void ImpulseResponseComponent::paint(juce::Graphics & g)
         double ms = 0.0f;
         double numberOfLines = 7.0f;
         double stepMS = thumbnail.getTotalLength() * 1000.0f / numberOfLines;
-        double roundedStep = floor((stepMS + 50.0f) / 100.0f) * 100.0f;
+        double roundedStep = floor((stepMS + 5.0f) / 10.0f) * 10.0f;
         while (ms < thumbnail.getTotalLength() * 1000.0f) {
             g.setColour(getLookAndFeel().findColour(0x0000002));
             g.setFont(8.0f);

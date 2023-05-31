@@ -47,6 +47,19 @@ private:
             pointsInVisualizerSlider.onValueChange = [this] { parentWindow.parameters.state.setProperty("points_in_visualizer", pointsInVisualizerSlider.getValue(), nullptr); };
             double pointsInVisualizer = parentWindow.parameters.state.getProperty("points_in_visualizer");
             pointsInVisualizerSlider.setValue(pointsInVisualizer, dontSendNotification);
+
+
+            addAndMakeVisible(irSettingsLabel);
+            irSettingsLabel.setFont(juce::Font(16.0f, juce::Font::bold));
+
+            addAndMakeVisible(linesInWaveformLabel);
+            addAndMakeVisible(linesInWaveformSlider);
+            linesInWaveformSlider.setSliderStyle(juce::Slider::LinearBar);
+            linesInWaveformSlider.setRange(0.0f, 15.0f, 1.0f);
+            linesInWaveformSlider.setTooltip("Number of scale lines that are displayed with the waveform.");
+            linesInWaveformSlider.onValueChange = [this] { parentWindow.parameters.state.setProperty("lines_in_waveform", linesInWaveformSlider.getValue(), nullptr); };
+            double linesInWaveform = parentWindow.parameters.state.getProperty("lines_in_waveform");
+            linesInWaveformSlider.setValue(linesInWaveform, dontSendNotification);
         };
 
         void paint(juce::Graphics & g) override
@@ -57,23 +70,36 @@ private:
         {
             auto area = getLocalBounds().reduced(5);
 
-            auto generalSettingsArea = area.removeFromTop(100);
-            generalSettingsLabel.           setBounds(generalSettingsArea.removeFromTop(25));
+            {   // General Settings
+                auto generalSettingsArea = area.removeFromTop(50);
+                generalSettingsLabel.           setBounds(generalSettingsArea.removeFromTop(25));
 
                 auto samplerateArea = generalSettingsArea.removeFromTop(25);
-                samplerateLabel.            setBounds(samplerateArea.removeFromLeft(samplerateArea.getWidth()/3));
-                samplerateValueLabel.       setBounds(samplerateArea);
+                samplerateLabel.                setBounds(samplerateArea.removeFromLeft(samplerateArea.getWidth()/3));
+                samplerateValueLabel.           setBounds(samplerateArea);
+            }
 
-            auto raytracerSettingsArea = area.removeFromTop(200);
-            raytracerSettingsLabel.         setBounds(raytracerSettingsArea.removeFromTop(25));
+            {   // Raytracer Settings
+                auto raytracerSettingsArea = area.removeFromTop(75);
+                raytracerSettingsLabel.         setBounds(raytracerSettingsArea.removeFromTop(25));
 
                 auto raysPerSourceArea = raytracerSettingsArea.removeFromTop(25);
-                raysPerSourceLabel.         setBounds(raysPerSourceArea.removeFromLeft(raysPerSourceArea.getWidth()/3));
-                raysPerSourceSlider.        setBounds(raysPerSourceArea);
+                raysPerSourceLabel.             setBounds(raysPerSourceArea.removeFromLeft(raysPerSourceArea.getWidth()/3));
+                raysPerSourceSlider.            setBounds(raysPerSourceArea);
 
                 auto pointsInVisualizerArea = raytracerSettingsArea.removeFromTop(25);
-                pointsInVisualizerLabel.    setBounds(pointsInVisualizerArea.removeFromLeft(pointsInVisualizerArea.getWidth()/3));
-                pointsInVisualizerSlider.   setBounds(pointsInVisualizerArea);
+                pointsInVisualizerLabel.        setBounds(pointsInVisualizerArea.removeFromLeft(pointsInVisualizerArea.getWidth()/3));
+                pointsInVisualizerSlider.       setBounds(pointsInVisualizerArea);
+            }
+
+            {   // IR Settings
+                auto irSettingsArea = area.removeFromTop(50);
+                irSettingsLabel.                setBounds(irSettingsArea.removeFromTop(25));
+
+                auto linesInWaveformArea = irSettingsArea.removeFromTop(25);
+                linesInWaveformLabel.           setBounds(linesInWaveformArea.removeFromLeft(linesInWaveformArea.getWidth()/3));
+                linesInWaveformSlider.          setBounds(linesInWaveformArea);
+            }
         }
 
     private:
@@ -88,6 +114,10 @@ private:
         Slider      raysPerSourceSlider;
         Label       pointsInVisualizerLabel{{}, "Points in Visualizer"};
         Slider      pointsInVisualizerSlider;
+
+        Label       irSettingsLabel{{}, "Impulse Response"};
+        Label       linesInWaveformLabel{{}, "Lines in waveform display"};
+        Slider      linesInWaveformSlider;
     };
 
     void closeButtonPressed() override;

@@ -93,7 +93,8 @@ private:
                      { "SettingsGroup", {{ "name", "Raytracer Settings" }},
                       {
                               { "Setting", {{ "id", "rays_per_source" },     { "value", 1000.0 }}},
-                              { "Setting", {{ "id", "points_in_visualizer" },     { "value", 50.0 }}}
+                              { "Setting", {{ "id", "points_in_visualizer" },     { "value", 50.0 }}},
+                              { "Setting", {{ "id", "lines_in_waveform" },     { "value", 10.0 }}}
                       }
                      }
              }
