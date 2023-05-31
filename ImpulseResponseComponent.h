@@ -30,11 +30,12 @@ private:
 
     juce::URL irFileURL = {};
 
+    TextButton playPauseButton = {"Play", "Play the currently loaded impulse response"};
     Label irFileLabel = {{}, "No file selected"};
     TextButton irFileLoadButton = {"Load audio File..." , "Choose a file that contains the impulse response you want to apply"};
     TextButton irFileSaveButton = {"Save impulse response..." , "Save the currently loaded impulse response on your computer"};
     std::unique_ptr<juce::FileChooser> irFileChooser;
-    TextButton playPauseButton = {"Play/Pause", {}};
+    TextButton clearButton = {"Clear", "Clear the impulse response buffer"};
 
     Label irSizeLabel;
 };

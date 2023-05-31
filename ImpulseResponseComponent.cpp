@@ -16,6 +16,9 @@ ImpulseResponseComponent::ImpulseResponseComponent(RaumsimulationAudioProcessor&
     formatManager.registerFormat(new OggVorbisAudioFormat(), false);
     formatManager.registerFormat(new WavAudioFormat(), false);
 
+    addAndMakeVisible(playPauseButton);
+    playPauseButton.onClick = [this] { audioProcessor.playIR(); };
+
     addAndMakeVisible(irFileLoadButton);
     irFileLoadButton.onClick = [this] { openFile(); };
 
@@ -24,14 +27,16 @@ ImpulseResponseComponent::ImpulseResponseComponent(RaumsimulationAudioProcessor&
 
     irFileLabel.attachToComponent(&irFileLoadButton, false);
     irFileLabel.setText(irFileURL.toString(false), sendNotificationAsync);
+    irFileLabel.setJustificationType(Justification::centredLeft);
 
     addAndMakeVisible(irSizeLabel);
     irSizeLabel.setText(juce::String::formatted("%.2f s", thumbnail.getTotalLength()), dontSendNotification);
     irSizeLabel.setJustificationType(Justification::right);
 
-    addAndMakeVisible(playPauseButton);
-    playPauseButton.setButtonText("Play");
-    playPauseButton.onClick = [this] { audioProcessor.playIR(); };
+    addAndMakeVisible(clearButton);
+    clearButton.onClick = [this] { audioProcessor.clearIR();
+                                   irFileURL = {};
+                                   updateThumbnail(audioProcessor.globalSampleRate); };
 
     setURL(irFileURL); // has to come after registering the audio formats
 }
@@ -43,10 +48,10 @@ ImpulseResponseComponent::~ImpulseResponseComponent()
 
 void ImpulseResponseComponent::paint(juce::Graphics & g)
 {
-    if (thumbnail.getTotalLength() > 0.0) {
-        auto thumbArea = getLocalBounds().reduced(5);
-        thumbArea.removeFromBottom(50);
+    auto thumbArea = getLocalBounds().reduced(5);
+    thumbArea.removeFromBottom(50);
 
+    if (thumbnail.getTotalLength() > 0.0) {
         double ms = 0.0f;
         double numberOfLines = 7.0f;
         double stepMS = thumbnail.getTotalLength() * 1000.0f / numberOfLines;
@@ -67,22 +72,27 @@ void ImpulseResponseComponent::paint(juce::Graphics & g)
     } else {
         g.setColour(getLookAndFeel().findColour(TextButton::textColourOffId));
         g.setFont(14.0f);
-        g.drawFittedText("No audio file selected", getLocalBounds(), Justification::centred, 2);
+        g.drawFittedText("No audio file selected", thumbArea, Justification::centred, 2);
     }
 }
 
 void ImpulseResponseComponent::resized()
 {
-    auto area = getLocalBounds().reduced(5);
-    auto bottom = area.removeFromBottom(50);
+    auto area = getLocalBounds();
 
-    auto buttons = bottom.removeFromBottom(25);
+    auto bottom = area.removeFromBottom(75);
 
-    playPauseButton.setBounds(buttons.removeFromLeft(100));
-    buttons.removeFromLeft(5);      // little space between buttons
-    irFileLoadButton.setBounds(buttons.removeFromLeft(buttons.getWidth()/2));
-    irFileSaveButton.setBounds(buttons);
-    irSizeLabel.setBounds(bottom.removeFromRight(100));
+    {   // Buttons
+        irSizeLabel.                setBounds(bottom.removeFromTop(25));
+
+        auto buttons = bottom.removeFromBottom(50);
+
+        playPauseButton.            setBounds(buttons.removeFromLeft(100).reduced(5));
+        clearButton.                setBounds(buttons.removeFromRight(100).reduced(5));
+
+        irFileLoadButton.           setBounds(buttons.removeFromLeft(buttons.getWidth()/2).reduced(5));
+        irFileSaveButton.           setBounds(buttons.reduced(5));
+    }
 }
 
 void ImpulseResponseComponent::setURL(const URL& url)

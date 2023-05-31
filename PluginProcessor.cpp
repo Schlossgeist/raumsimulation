@@ -248,6 +248,13 @@ void RaumsimulationAudioProcessor::playIR()
     play = true;
 }
 
+void RaumsimulationAudioProcessor::clearIR()
+{
+    irBufferPosition = 0;
+    ir.clear();
+    ir.setSize(ir.getNumChannels(), 0);
+}
+
 /**
  * @see https://www.recordingblogs.com/wiki/sine-sweep
  */
