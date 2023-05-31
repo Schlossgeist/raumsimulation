@@ -38,6 +38,8 @@ OpenGLComponent::OpenGLComponent(RaumsimulationAudioProcessor& p, juce::AudioPro
     , raytracer(r)
 {
     objFileURL = static_cast<const juce::URL>(parameters.state.getProperty("obj_file_url"));
+    scale = (float) parameters.state.getProperty("zoom");
+    rotationSpeed = (float) parameters.state.getProperty("rotation_speed");
 
     setOpaque(true);
     controlsOverlay.reset(new ControlsOverlay(*this));
@@ -47,8 +49,6 @@ OpenGLComponent::OpenGLComponent(RaumsimulationAudioProcessor& p, juce::AudioPro
     openGLContext.setRenderer(this);
     openGLContext.setContinuousRepainting(true);
     openGLContext.attachTo(*this);
-
-    controlsOverlay->initialise();
 }
 
 OpenGLComponent::~OpenGLComponent()

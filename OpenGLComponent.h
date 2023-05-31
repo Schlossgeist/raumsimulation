@@ -601,8 +601,6 @@ private:
         and widgets that control things.
     */
     class ControlsOverlay : public Component,
-                            private CodeDocument::Listener,
-                            private Slider::Listener,
                             private Timer
     {
     public:
@@ -611,25 +609,29 @@ private:
         {
             addAndMakeVisible(statusLabel);
             statusLabel.setJustificationType(Justification::topLeft);
-            statusLabel.setFont(Font(14.0f));
 
-            addAndMakeVisible(sizeSlider);
-            sizeSlider.setRange(0.0, 1.0, 0.001);
-            sizeSlider.addListener(this);
+            addAndMakeVisible(zoomSlider);
+            zoomSlider.setSliderStyle(juce::Slider::LinearBar);
+            zoomSlider.setRange(0.0, 1.0, 0.001);
+            zoomSlider.onValueChange = [this] { sliderChanged();
+                                                openGLComponent.parameters.state.setProperty("zoom", zoomSlider.getValue(), nullptr); };
+            float zoom = (float) openGLComponent.parameters.state.getProperty("zoom");
+            zoomSlider.setValue(zoom, dontSendNotification);
 
             addAndMakeVisible(zoomLabel);
-            zoomLabel.attachToComponent(&sizeSlider, true);
+            zoomLabel.attachToComponent(&zoomSlider, true);
 
             addAndMakeVisible(speedSlider);
+            speedSlider.setSliderStyle(juce::Slider::LinearBar);
             speedSlider.setRange(0.0, 0.5, 0.001);
-            speedSlider.addListener(this);
+            speedSlider.onValueChange = [this] { sliderChanged();
+                                                 openGLComponent.parameters.state.setProperty("rotation_speed", speedSlider.getValue(), nullptr); };
+            float rotation_speed = (float) openGLComponent.parameters.state.getProperty("rotation_speed");
+            speedSlider.setValue(rotation_speed, dontSendNotification);
             speedSlider.setSkewFactor(0.5f);
 
             addAndMakeVisible(speedLabel);
             speedLabel.attachToComponent(&speedSlider, true);
-
-            vertexDocument.addListener(this);
-            fragmentDocument.addListener(this);
 
             addAndMakeVisible(presetBox);
             presetBox.onChange = [this] { selectPreset(presetBox.getSelectedItemIndex()); };
@@ -638,6 +640,8 @@ private:
 
             for (int i = 0; i < presets.size(); ++i)
                 presetBox.addItem(presets[i].name, i + 1);
+
+            presetBox.setSelectedItemIndex(0);
 
             addAndMakeVisible(presetLabel);
             presetLabel.attachToComponent(&presetBox, true);
@@ -651,30 +655,24 @@ private:
             lookAndFeelChanged();
         }
 
-        void initialise()
-        {
-            presetBox.setSelectedItemIndex(0);
-            speedSlider.setValue(0.01);
-            sizeSlider.setValue(0.5);
-        }
-
         void resized() override
         {
             auto area = getLocalBounds().reduced(5);
 
-            auto top = area.removeFromTop(75);
+            {   // Top
+                auto top = area.removeFromTop(50);
 
-            auto sliders = top.removeFromRight(area.getWidth() / 2);
-            speedSlider.setBounds(sliders.removeFromBottom(25));
-            sizeSlider.setBounds(sliders.removeFromBottom(25));
+                auto sliders = top.removeFromRight(1*area.getWidth()/5);
+                speedSlider.setBounds(sliders.removeFromBottom(25));
+                zoomSlider.setBounds(sliders.removeFromBottom(25));
 
-            top.removeFromRight(70);
-            statusLabel.setBounds(top);
+                statusLabel.setBounds(top);
+            }
 
-            auto bottom = area.removeFromBottom(25);
-            presetBox.setBounds(bottom.removeFromLeft(bottom.getWidth() / 3));
-            bottom.removeFromLeft(5);       // little space between combo box and file chooser button
-            objFileLoadButton.setBounds(bottom.removeFromRight(bottom.getWidth()));
+            {   // Bottom
+                auto bottom = area.removeFromBottom(25);
+                objFileLoadButton.setBounds(bottom.removeFromRight(1*area.getWidth()/2));
+            }
         }
 
         bool isMouseButtonDownThreadsafe() const { return buttonDown; }
@@ -700,20 +698,17 @@ private:
 
         void mouseWheelMove(const MouseEvent&, const MouseWheelDetails& d) override
         {
-            sizeSlider.setValue(sizeSlider.getValue() + d.deltaY);
+            zoomSlider.setValue(zoomSlider.getValue() + d.deltaY);
         }
 
-        void mouseMagnify(const MouseEvent&, float magnifyAmmount) override
+        void mouseMagnify(const MouseEvent&, float magnifyAmount) override
         {
-            sizeSlider.setValue(sizeSlider.getValue() + magnifyAmmount - 1.0f);
+            zoomSlider.setValue(zoomSlider.getValue() + magnifyAmount - 1.0f);
         }
 
         void selectPreset(int preset)
         {
             const auto& p = OpenGLUtils::getPresets()[preset];
-
-            vertexDocument.replaceAllContent(p.vertexShader);
-            fragmentDocument.replaceAllContent(p.fragmentShader);
 
             startTimer(1);
         }
@@ -726,25 +721,15 @@ private:
         Label statusLabel;
 
     private:
-        void sliderValueChanged(Slider*) override
+        void sliderChanged()
         {
             const ScopedLock lock(openGLComponent.mutex);
 
-            openGLComponent.scale = (float)sizeSlider.getValue();
-            openGLComponent.rotationSpeed = (float)speedSlider.getValue();
+            openGLComponent.scale = (float) zoomSlider.getValue();
+            openGLComponent.rotationSpeed = (float) speedSlider.getValue();
         }
 
         enum { shaderLinkDelay = 500 };
-
-        void codeDocumentTextInserted(const String& /*newText*/, int /*insertIndex*/) override
-        {
-            startTimer(shaderLinkDelay);
-        }
-
-        void codeDocumentTextDeleted(int /*startIndex*/, int /*endIndex*/) override
-        {
-            startTimer(shaderLinkDelay);
-        }
 
         void timerCallback() override
         {
@@ -754,16 +739,14 @@ private:
 
         OpenGLComponent& openGLComponent;
 
-        Label speedLabel{ {}, "Speed:" },
-            zoomLabel{ {}, "Zoom:" };
-
-        CodeDocument vertexDocument, fragmentDocument;
+        Label   speedLabel{{}, "Speed"};
+        Label   zoomLabel{{}, "Zoom"};
 
         ComboBox presetBox;
 
         Label presetLabel{ {}, "Shader Preset:" };
 
-        Slider speedSlider, sizeSlider;
+        Slider speedSlider, zoomSlider;
 
         std::atomic<bool> buttonDown{ false };
 
