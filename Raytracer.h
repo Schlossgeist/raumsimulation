@@ -26,23 +26,23 @@ public:
         glm::vec3 position;
         glm::vec3 normal;
         float scatterCoefficient;
-        Band6Coefficients energy_coefficients;
+        Band6Coefficients energyCoefficients;
         float delayMS = 0.0f;
     };
 
     struct EnergyPortion {
-        Band6Coefficients energy_coefficients;
+        Band6Coefficients energyCoefficients;
         float delayMS = 0.0f;
 
         static bool byTotalEnergy (EnergyPortion a, EnergyPortion b)
         {
             float totalA = 0;
-            for (float coefficient : a.energy_coefficients.coefficients) {
+            for (float coefficient : a.energyCoefficients.coefficients) {
                 totalA += coefficient;
             }
 
             float totalB = 0;
-            for (float coefficient : a.energy_coefficients.coefficients) {
+            for (float coefficient : a.energyCoefficients.coefficients) {
                 totalB += coefficient;
             }
 

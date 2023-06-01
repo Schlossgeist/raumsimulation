@@ -141,11 +141,11 @@ void Raytracer::run()
                         // energy received at the observers is proportional to the cosine of the angle between the reflection vector and the surface normal
                         glm::vec3 edgeSM = glm::normalize(microphone.position - secondarySource.position);
                         float     angle  = glm::angle(glm::normalize(secondarySource.normal), edgeSM);
-                        secondarySource.energy_coefficients *= cos(angle);
+                        secondarySource.energyCoefficients *= cos(angle);
                     }
 
                     secondarySource.delayMS += glm::length(secondarySource.position - microphone.position) / speedOfSoundMpS * 1000.0f;
-                    histograms.at(microphone.name).push_back({secondarySource.energy_coefficients, secondarySource.delayMS});
+                    histograms.at(microphone.name).push_back({secondarySource.energyCoefficients, secondarySource.delayMS});
                 }
 
                 // update the progress bar on the dialog box
@@ -260,7 +260,7 @@ void Raytracer::run()
                     if (!slice.empty()) {
                         float gain = 0.0f;
                         for (int ep = 0; ep < slice.size(); ep++) {
-                            gain += slice[ep].energy_coefficients[i];
+                            gain += slice[ep].energyCoefficients[i];
                         }
                         gain /= (float) slice.size();
                         writePtrArray[channel][sample] = gain*gain;
@@ -310,7 +310,7 @@ void Raytracer::trace(Raytracer::Ray ray)
             secondarySource.normal = hit.normal;
             secondarySource.scatterCoefficient = hit.materialProperties.roughness;
             secondarySource.delayMS += hit.distance / speedOfSoundMpS * 1000.0f;
-            secondarySource.energy_coefficients *= -hit.materialProperties.absorptionCoefficients;
+            secondarySource.energyCoefficients *= -hit.materialProperties.absorptionCoefficients;
 
             secondarySources.push_back(secondarySource);
 
