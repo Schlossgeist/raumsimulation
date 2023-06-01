@@ -246,25 +246,27 @@ void Raytracer::run()
 
         AudioBuffer<float> gainCurveBuffers[6] = {audioProcessor.ir, audioProcessor.ir, audioProcessor.ir, audioProcessor.ir, audioProcessor.ir, audioProcessor.ir};
 
-
+        float gain = 0.0f;
         for (int sample = 0; sample < audioProcessor.ir.getNumSamples(); sample++) {
-            double centerTimeMS = sample / audioProcessor.globalSampleRate * 1000.0f;
-            double rangeTimeMS = 25.0f;
-            auto slice = extractHistogramSlice(centerTimeMS, rangeTimeMS, activeMicrophoneName);
+            double startTimeMS = sample / audioProcessor.globalSampleRate * 1000.0f;
+            double endTimeMS = startTimeMS + 1000.0f/audioProcessor.globalSampleRate;
+            auto slice = extractHistogramSlice(startTimeMS, endTimeMS, activeMicrophoneName);
 
             for (int channel = 0; channel < audioProcessor.ir.getNumChannels(); channel++) {
                 for (int i = 0; i < 6; i++) {
                     setStatusMessage("Calculating gain curve for sample " + String(sample+1) + "/" + String(audioProcessor.ir.getNumSamples())
                                      + " in band " + String(pow(2, i)*125.0f));
                     auto *writePtrArray = gainCurveBuffers[i].getArrayOfWritePointers();
+
                     if (!slice.empty()) {
-                        float gain = 0.0f;
+                        gain = 0.0f;
                         for (int ep = 0; ep < slice.size(); ep++) {
                             gain += slice[ep].energyCoefficients[i];
                         }
                         gain /= (float) slice.size();
-                        writePtrArray[channel][sample] = gain*gain;
                     }
+
+                    writePtrArray[channel][sample] = gain;
                 }
             }
         }
@@ -278,12 +280,34 @@ void Raytracer::run()
 
         audioProcessor.ir.clear();
 
+        //for (int i = 0; i < 6; i++) {
+        //    auto *writePtrArray = audioProcessor.ir.getArrayOfWritePointers();
+        //    auto *bandPtrArray = bandBuffers[i].getArrayOfReadPointers();
+        //    auto *gainPtrArray = gainCurveBuffers[i].getArrayOfReadPointers();
+        //    for (int channel = 0; channel < bandBuffers[i].getNumChannels(); channel++) {
+        //        for (int sample = 0; sample < bandBuffers[i].getNumSamples(); sample++) {
+        //            writePtrArray[channel][sample] += bandPtrArray[channel][sample] * gainPtrArray[channel][sample];
+        //        }
+        //    }
+        //}
+
         for (int i = 0; i < 6; i++) {
             auto *writePtrArray = audioProcessor.ir.getArrayOfWritePointers();
-            auto *readPtrArray = bandBuffers[i].getArrayOfReadPointers();
+            auto *bandPtrArray = bandBuffers[i].getArrayOfReadPointers();
+            auto *gainPtrArray = gainCurveBuffers[i].getArrayOfReadPointers();
             for (int channel = 0; channel < bandBuffers[i].getNumChannels(); channel++) {
                 for (int sample = 0; sample < bandBuffers[i].getNumSamples(); sample++) {
-                    writePtrArray[channel][sample] += readPtrArray[channel][sample];
+                    writePtrArray[channel][sample] += gainPtrArray[channel][sample];
+                }
+            }
+        }
+
+        auto *writePtrArray = audioProcessor.ir.getArrayOfWritePointers();
+        for (int channel = 0; channel < audioProcessor.ir.getNumChannels(); channel++) {
+            for (int sample = 0; sample < audioProcessor.ir.getNumSamples(); sample++) {
+                writePtrArray[channel][sample] *= 0.25f;
+                if (randomGenerator.nextBool()) {
+                    writePtrArray[channel][sample] *= -1.0f;
                 }
             }
         }
@@ -312,7 +336,10 @@ void Raytracer::trace(Raytracer::Ray ray)
             secondarySource.delayMS += hit.distance / speedOfSoundMpS * 1000.0f;
             secondarySource.energyCoefficients *= -hit.materialProperties.absorptionCoefficients;
 
-            secondarySources.push_back(secondarySource);
+            auto recordedSecondarySource = secondarySource;
+            recordedSecondarySource.energyCoefficients *= hit.materialProperties.roughness;
+
+            secondarySources.push_back(recordedSecondarySource);
 
             ray.position = hit.hitPoint;
 
@@ -326,6 +353,7 @@ void Raytracer::trace(Raytracer::Ray ray)
                 diffuseReflection *= -1;
             }
             ray.direction = normalize(mix(specularReflection, diffuseReflection, hit.materialProperties.roughness));
+            secondarySource.energyCoefficients *= 1-hit.materialProperties.roughness;
         } else {
             break;
         }

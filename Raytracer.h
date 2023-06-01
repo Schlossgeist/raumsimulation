@@ -77,7 +77,7 @@ public:
     };
 
     const int maxBounces = 10;
-    const int raysPerSource = 100;
+    const int raysPerSource = 1000;
     const float speedOfSoundMpS = 343.0f;
 
     struct Ray {
@@ -96,16 +96,9 @@ public:
     std::vector<Object> objects;
     std::map<String, std::vector<EnergyPortion>> histograms;
 
-    std::vector<EnergyPortion> extractHistogramSlice(double centerTimeMS, double rangeTimeMS, String activeMicrophoneName)
+    std::vector<EnergyPortion> extractHistogramSlice(double startTimeMS, double endTimeMS, const String& activeMicrophoneName)
     {
-        double startTimeMS   = centerTimeMS - rangeTimeMS/2;
-        double endTimeMS     = centerTimeMS + rangeTimeMS/2;
-
         std::vector<EnergyPortion> result;
-
-        if (startTimeMS < 0.0f) {
-            startTimeMS = 0.0f;
-        }
 
         auto energyPortions = histograms.at(activeMicrophoneName);
         std::sort(energyPortions.begin(), energyPortions.end(), EnergyPortion::byDelay);
