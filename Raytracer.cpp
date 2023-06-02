@@ -40,6 +40,8 @@ void Raytracer::run()
         setStatusMessage("Using " + activeMicrophoneName + " for IR generation");
         sleep(1000);
     } else {
+        setStatusMessage("No active microphone found. Terminating...");
+        sleep(1000);
         return;
     }
 
@@ -56,20 +58,12 @@ void Raytracer::run()
         setStatusMessage("Casting rays...");
 
         for (int speakerNum = 0; speakerNum < speakers.size(); speakerNum++) {
-            // user pressed "cancel"
-            if (threadShouldExit())
-                break;
-
             setStatusMessage("Casting Rays for source " + String(speakerNum + 1) + " / " + String(speakers.size()));
 
             // add source for direct sound
             secondarySources.push_back({0, speakers[speakerNum].position, glm::vec3(), 0.0f, Band6Coefficients(), 0.0f});
 
             for (int rayNum = 0; rayNum < raysPerSource; rayNum++) {
-                // user pressed "cancel"
-                if (threadShouldExit())
-                    break;
-
                 // generate Ray at speaker position with random direction
                 Ray randomRay = {
                         speakers[speakerNum].position,
@@ -106,6 +100,9 @@ void Raytracer::run()
 
         roomVolumeM3 = (abs(minX) + abs(maxX)) * (abs(minY) + abs(maxY)) * (abs(minZ) + abs(maxZ));
         roomVolumeM3 = floor(roomVolumeM3 / 10.0f) * 10.0f;
+
+        setStatusMessage("Estimated room size: " + String(roomVolumeM3) + " cubic meters");
+        sleep(1000);
     }
 
     //========================= GATHERING =========================//
@@ -155,6 +152,7 @@ void Raytracer::run()
     }
 
     //========================= GENERATING =========================//
+    AudioBuffer<float> buffer;
     {
         setStatusMessage("Generating impulse response...");
 
@@ -162,21 +160,21 @@ void Raytracer::run()
 
         double latestReflectionS = histograms.at(activeMicrophoneName)[histograms.at(activeMicrophoneName).size() - 1].delayMS / 1000.0f;
 
-        audioProcessor.ir.setSize(audioProcessor.ir.getNumChannels(),
-                                  audioProcessor.globalSampleRate * (latestReflectionS + 0.1f),
-                                  false,
-                                  true,
-                                  false);
+        buffer.setSize(audioProcessor.ir.getNumChannels(),
+                       (int) (audioProcessor.globalSampleRate * (latestReflectionS + 0.1f)),
+                       false,
+                       true,
+                       false);
 
-        double endOfLastIntervalMS = histograms.at(activeMicrophoneName)[0].delayMS;
+        double endOfPreviousIntervalMS = histograms.at(activeMicrophoneName)[0].delayMS;
 
         setStatusMessage("Generating dirac sequence...");
 
-        while (endOfLastIntervalMS < latestReflectionS * 1000.0f) {
+        while (endOfPreviousIntervalMS < latestReflectionS * 1000.0f) {
             // random value from nextDouble() is in range 0 (inclusive) to 1.0 (exclusive),
             // but here range 0 (exclusive) to 1.0 (inclusive) is needed because this value is used as a denominator
             double randomNumber = abs(randomGenerator.nextDouble() - 1);
-            double currentTimeMS = endOfLastIntervalMS;
+            double currentTimeMS = endOfPreviousIntervalMS;
 
             /**
              * @see Section 5.3.4 in Dirk Schröder, Physically Based Real-Time Auralization of Interactive Virtual Environments
@@ -210,52 +208,32 @@ void Raytracer::run()
 
             int sample = (int) (eventTimeMS * audioProcessor.globalSampleRate / 1000.0f);
 
-            auto *writePtrArray = audioProcessor.ir.getArrayOfWritePointers();
-            for (int channel = 0; channel < audioProcessor.ir.getNumChannels(); channel++) {
+            auto *writePtrArray = buffer.getArrayOfWritePointers();
+            for (int channel = 0; channel < buffer.getNumChannels(); channel++) {
                 writePtrArray[channel][sample] = dirac;
             }
 
-            endOfLastIntervalMS += intervalSizeMS;
+            endOfPreviousIntervalMS += intervalSizeMS;
         }
 
         sleep(1000);
     }
 
+    audioProcessor.ir = buffer;
     impulseResponseComponent.updateThumbnail(audioProcessor.globalSampleRate);
 
     {
-        auto diracBuffer = audioProcessor.ir;
-
-        AudioBuffer<float> bandBuffers[6] = {diracBuffer, diracBuffer, diracBuffer, diracBuffer, diracBuffer, diracBuffer};
-
-        for (int i = 0; i < 6; i++) {
-            setStatusMessage("Filtering for band " + String(i+1) + "/6");
-
-            double centerFrequency = pow(2, i)*125;
-            IIRFilter filter;
-            filter.setCoefficients(juce::IIRCoefficients::makeBandPass(
-                    audioProcessor.globalSampleRate,
-                    centerFrequency,
-                    1.0f/sqrt(2.0f)));
-
-            auto *writePtrArray = bandBuffers[i].getArrayOfWritePointers();
-            for (int channel = 0; channel < bandBuffers[i].getNumChannels(); channel++) {
-                filter.processSamples(writePtrArray[channel], bandBuffers[i].getNumSamples());
-            }
-        }
-
-        AudioBuffer<float> gainCurveBuffers[6] = {audioProcessor.ir, audioProcessor.ir, audioProcessor.ir, audioProcessor.ir, audioProcessor.ir, audioProcessor.ir};
+        AudioBuffer<float> gainCurveBuffers[6] = {buffer, buffer, buffer, buffer, buffer, buffer};
 
         float gain = 0.0f;
-        for (int sample = 0; sample < audioProcessor.ir.getNumSamples(); sample++) {
+        for (int sample = 0; sample < buffer.getNumSamples(); sample++) {
             double startTimeMS = sample / audioProcessor.globalSampleRate * 1000.0f;
             double endTimeMS = startTimeMS + 1000.0f/audioProcessor.globalSampleRate;
             auto slice = extractHistogramSlice(startTimeMS, endTimeMS, activeMicrophoneName);
 
-            for (int channel = 0; channel < audioProcessor.ir.getNumChannels(); channel++) {
+            for (int channel = 0; channel < buffer.getNumChannels(); channel++) {
                 for (int i = 0; i < 6; i++) {
-                    setStatusMessage("Calculating gain curve for sample " + String(sample+1) + "/" + String(audioProcessor.ir.getNumSamples())
-                                     + " in band " + String(pow(2, i)*125.0f));
+                    setStatusMessage("Calculating gain curve for sample " + String(sample+1) + "/" + String(audioProcessor.ir.getNumSamples()));
                     auto *writePtrArray = gainCurveBuffers[i].getArrayOfWritePointers();
 
                     if (!slice.empty()) {
@@ -271,29 +249,102 @@ void Raytracer::run()
             }
         }
 
+        AudioBuffer<float> bandBuffers[6] = {buffer, buffer, buffer, buffer, buffer, buffer};
+
         for (int i = 0; i < 6; i++) {
-            setStatusMessage("Showing band " + String(pow(2, i)*125.0f));
-            audioProcessor.ir = gainCurveBuffers[i];
+            double centerFrequency = pow(2, i)*125;
+            setStatusMessage("Filtering forwards for band " + String(i+1) + "/6 (" + String(centerFrequency) + " Hz)");
+
+            IIRFilter filter;
+            filter.setCoefficients(juce::IIRCoefficients::makeBandPass(
+                    audioProcessor.globalSampleRate,
+                    centerFrequency,
+                    1.0f/sqrt(2.0f)));
+
+            auto *writePtrArray = bandBuffers[i].getArrayOfWritePointers();
+            for (int channel = 0; channel < bandBuffers[i].getNumChannels(); channel++) {
+                filter.processSamples(writePtrArray[channel], bandBuffers[i].getNumSamples());
+            }
+        }
+
+        setStatusMessage("Reversing bands...");
+        for (int i = 0; i < 6; i++) {
+            bandBuffers[i].reverse(0, bandBuffers[i].getNumSamples() - 1);
+        }
+
+        for (int i = 0; i < 6; i++) {
+            double centerFrequency = pow(2, i)*125;
+            setStatusMessage("Filtering backwards for band " + String(i+1) + "/6 (" + String(centerFrequency) + " Hz)");
+
+            IIRFilter filter;
+            filter.setCoefficients(juce::IIRCoefficients::makeBandPass(
+                    audioProcessor.globalSampleRate,
+                    centerFrequency,
+                    1.0f/sqrt(2.0f)));
+
+            auto *writePtrArray = bandBuffers[i].getArrayOfWritePointers();
+            for (int channel = 0; channel < bandBuffers[i].getNumChannels(); channel++) {
+                filter.processSamples(writePtrArray[channel], bandBuffers[i].getNumSamples());
+            }
+        }
+
+        setStatusMessage("Reversing bands...");
+        for (int i = 0; i < 6; i++) {
+            bandBuffers[i].reverse(0, bandBuffers[i].getNumSamples() - 1);
+        }
+
+        for (int i = 0; i < 6; i++) {
+            setStatusMessage("Showing filtered band " + String(i+1) + "/6 (" + String(pow(2, i)*125) + " Hz)");
+            audioProcessor.ir = bandBuffers[i];
             impulseResponseComponent.updateThumbnail(audioProcessor.globalSampleRate);
             sleep(1000);
         }
 
         audioProcessor.ir.clear();
 
-        //for (int i = 0; i < 6; i++) {
-        //    auto *writePtrArray = audioProcessor.ir.getArrayOfWritePointers();
-        //    auto *bandPtrArray = bandBuffers[i].getArrayOfReadPointers();
-        //    auto *gainPtrArray = gainCurveBuffers[i].getArrayOfReadPointers();
-        //    for (int channel = 0; channel < bandBuffers[i].getNumChannels(); channel++) {
-        //        for (int sample = 0; sample < bandBuffers[i].getNumSamples(); sample++) {
-        //            writePtrArray[channel][sample] += bandPtrArray[channel][sample] * gainPtrArray[channel][sample];
-        //        }
-        //    }
-        //}
+        for (int i = 0; i < 6; i++) {
+            setStatusMessage("Weighing band " + String(i+1) + "/6 (" + String(pow(2, i)*125) + " Hz)");
+            auto *writePtrArray = bandBuffers[i].getArrayOfWritePointers();
+            auto *readPtrArray = gainCurveBuffers[i].getArrayOfReadPointers();
+            for (int channel = 0; channel < bandBuffers[i].getNumChannels(); channel++) {
+                for (int sample = 0; sample < bandBuffers[i].getNumSamples(); sample++) {
+                    writePtrArray[channel][sample] *= readPtrArray[channel][sample];
+                }
+            }
+        }
 
         for (int i = 0; i < 6; i++) {
+            setStatusMessage("Showing weighed band " + String(i+1) + "/6 (" + String(pow(2, i)*125) + " Hz)");
+            audioProcessor.ir = bandBuffers[i];
+            impulseResponseComponent.updateThumbnail(audioProcessor.globalSampleRate);
+            sleep(1000);
+        }
+
+        buffer = bandBuffers[0];
+
+        for (int i = 1; i < 6; i++) {
+            setStatusMessage("Adding weighed bands...");
+            auto *writePtrArray = buffer.getArrayOfWritePointers();
+            auto *readPtrArray = bandBuffers[i].getArrayOfReadPointers();
+            for (int channel = 0; channel < bandBuffers[i].getNumChannels(); channel++) {
+                for (int sample = 0; sample < bandBuffers[i].getNumSamples(); sample++) {
+                    writePtrArray[channel][sample] += readPtrArray[channel][sample];
+                }
+            }
+        }
+
+        auto *writePtrArray = buffer.getArrayOfWritePointers();
+        for (int channel = 0; channel < buffer.getNumChannels(); channel++) {
+            for (int sample = 0; sample < buffer.getNumSamples(); sample++) {
+                writePtrArray[channel][sample] *= 1.0f;
+            }
+        }
+
+        audioProcessor.ir = buffer;
+
+        /**
+        for (int i = 0; i < 6; i++) {
             auto *writePtrArray = audioProcessor.ir.getArrayOfWritePointers();
-            auto *bandPtrArray = bandBuffers[i].getArrayOfReadPointers();
             auto *gainPtrArray = gainCurveBuffers[i].getArrayOfReadPointers();
             for (int channel = 0; channel < bandBuffers[i].getNumChannels(); channel++) {
                 for (int sample = 0; sample < bandBuffers[i].getNumSamples(); sample++) {
@@ -311,6 +362,7 @@ void Raytracer::run()
                 }
             }
         }
+        **/
 
         sleep(1000);
     }
