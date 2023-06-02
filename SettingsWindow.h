@@ -60,6 +60,13 @@ private:
             linesInWaveformSlider.onValueChange = [this] { parentWindow.parameters.state.setProperty("lines_in_waveform", linesInWaveformSlider.getValue(), nullptr); };
             double linesInWaveform = parentWindow.parameters.state.getProperty("lines_in_waveform");
             linesInWaveformSlider.setValue(linesInWaveform, dontSendNotification);
+
+            addAndMakeVisible(stereoLabel);
+            addAndMakeVisible(stereoToggle);
+            stereoToggle.setTooltip("Whether to generate a stereo impulse response.");
+            stereoToggle.onStateChange = [this] { parentWindow.parameters.state.setProperty("stereo_ir", stereoToggle.getToggleState(), nullptr);  };
+            bool stereoIR = parentWindow.parameters.state.getProperty("stereo_ir");
+            stereoToggle.setToggleState(stereoIR, dontSendNotification);
         };
 
         void paint(juce::Graphics & g) override
@@ -93,31 +100,37 @@ private:
             }
 
             {   // IR Settings
-                auto irSettingsArea = area.removeFromTop(50);
+                auto irSettingsArea = area.removeFromTop(75);
                 irSettingsLabel.                setBounds(irSettingsArea.removeFromTop(25));
 
                 auto linesInWaveformArea = irSettingsArea.removeFromTop(25);
                 linesInWaveformLabel.           setBounds(linesInWaveformArea.removeFromLeft(linesInWaveformArea.getWidth()/3));
                 linesInWaveformSlider.          setBounds(linesInWaveformArea);
+
+                auto stereoIRArea = irSettingsArea.removeFromTop(25);
+                stereoLabel.                    setBounds(stereoIRArea.removeFromLeft(stereoIRArea.getWidth()/3));
+                stereoToggle.                   setBounds(stereoIRArea);
             }
         }
 
     private:
         SettingsWindow& parentWindow;
 
-        Label       generalSettingsLabel{{}, "General"};
-        Label       samplerateLabel{{}, "Rendering Samplerate"};
-        Label       samplerateValueLabel{{}, "0"};
+        Label           generalSettingsLabel{{}, "General"};
+        Label           samplerateLabel{{}, "Rendering Samplerate"};
+        Label           samplerateValueLabel{{}, "0"};
+        Label           stereoLabel{{}, "Generate Stereo IRs"};
+        ToggleButton    stereoToggle;
 
-        Label       raytracerSettingsLabel{{}, "Raytracer"};
-        Label       raysPerSourceLabel{{}, "Rays per Source"};
-        Slider      raysPerSourceSlider;
-        Label       pointsInVisualizerLabel{{}, "Points in Visualizer"};
-        Slider      pointsInVisualizerSlider;
+        Label           raytracerSettingsLabel{{}, "Raytracer"};
+        Label           raysPerSourceLabel{{}, "Rays per Source"};
+        Slider          raysPerSourceSlider;
+        Label           pointsInVisualizerLabel{{}, "Points in Visualizer"};
+        Slider          pointsInVisualizerSlider;
 
-        Label       irSettingsLabel{{}, "Impulse Response"};
-        Label       linesInWaveformLabel{{}, "Lines in waveform display"};
-        Slider      linesInWaveformSlider;
+        Label           irSettingsLabel{{}, "Impulse Response"};
+        Label           linesInWaveformLabel{{}, "Lines in waveform display"};
+        Slider          linesInWaveformSlider;
     };
 
     void closeButtonPressed() override;
