@@ -48,6 +48,11 @@ OpenGLComponent::OpenGLComponent(RaumsimulationAudioProcessor& p, juce::AudioPro
 
     openGLContext.setRenderer(this);
     openGLContext.setContinuousRepainting(true);
+
+    OpenGLPixelFormat pixelFormat;
+    pixelFormat.multisamplingLevel = 16;
+    openGLContext.setPixelFormat(pixelFormat);
+    openGLContext.setMultisamplingEnabled(true);
     openGLContext.attachTo(*this);
 }
 
