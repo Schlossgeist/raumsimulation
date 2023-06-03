@@ -59,24 +59,7 @@ public:
 
     struct Material
     {
-        Material() noexcept
-        {
-            zerostruct (ambient);
-            zerostruct (diffuse);
-            zerostruct (specular);
-            zerostruct (transmittance);
-            zerostruct (emission);
-        }
-
         String name;
-
-        glm::vec3 ambient, diffuse, specular, transmittance, emission;
-        float shininess = 1.0f, refractiveIndex = 0.0f;
-
-        String ambientTextureName, diffuseTextureName,
-               specularTextureName, normalTextureName;
-
-        StringPairArray parameters;
     };
 
     struct Surface {
@@ -331,21 +314,8 @@ private:
             {
                 auto name = String(l).trim();
 
-                for (auto i = knownMaterials.size(); --i >= 0;)
-                {
-                    if (knownMaterials.at(i).name == name)
-                    {
-                        lastMaterial = knownMaterials.at(i);
-                        break;
-                    }
-                }
+                lastMaterial = {name};
 
-                continue;
-            }
-
-            if (matchToken(l, "mtllib"))
-            {
-                auto r = parseMaterial(knownMaterials, String (l).trim());
                 continue;
             }
 
@@ -363,48 +333,6 @@ private:
         if (auto* shape = parseFaceGroup(mesh, faceGroup, lastMaterial, lastName))
             shapes.push_back(shape);
 
-        return Result::ok();
-    }
-
-    Result parseMaterial(std::vector<Material>& materials, const String& filename)
-    {
-        jassert(sourceFile.exists());
-        auto f = sourceFile.getSiblingFile(filename);
-
-        if (!f.exists())
-            return Result::fail("Cannot open file: " + filename);
-
-        auto lines = StringArray::fromLines(f.loadFileAsString());
-
-        materials.clear();
-        Material material;
-
-        for (const auto& line : lines)
-        {
-            auto l = line.getCharPointer().findEndOfWhitespace();
-
-            if (matchToken (l, "newmtl"))   { materials.push_back(material); material.name = String(l).trim(); continue; }
-
-            if (matchToken (l, "Ka"))       { material.ambient         = parseVector(l); continue; }
-            if (matchToken (l, "Kd"))       { material.diffuse         = parseVector(l); continue; }
-            if (matchToken (l, "Ks"))       { material.specular        = parseVector(l); continue; }
-            if (matchToken (l, "Kt"))       { material.transmittance   = parseVector(l); continue; }
-            if (matchToken (l, "Ke"))       { material.emission        = parseVector(l); continue; }
-            if (matchToken (l, "Ni"))       { material.refractiveIndex = parseFloat(l);  continue; }
-            if (matchToken (l, "Ns"))       { material.shininess       = parseFloat(l);  continue; }
-
-            if (matchToken (l, "map_Ka"))   { material.ambientTextureName  = String(l).trim(); continue; }
-            if (matchToken (l, "map_Kd"))   { material.diffuseTextureName  = String(l).trim(); continue; }
-            if (matchToken (l, "map_Ks"))   { material.specularTextureName = String(l).trim(); continue; }
-            if (matchToken (l, "map_Ns"))   { material.normalTextureName   = String(l).trim(); continue; }
-
-            auto tokens = StringArray::fromTokens(l, " \t", "");
-
-            if (tokens.size() >= 2)
-                material.parameters.set(tokens[0].trim(), tokens[1].trim());
-        }
-
-        materials.push_back(material);
         return Result::ok();
     }
 
