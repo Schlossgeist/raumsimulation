@@ -99,7 +99,7 @@ void ImpulseResponseComponent::setURL(const URL& url)
 {
     if (url.isLocalFile())
     {
-        auto source = new FileInputSource(irFileURL.getLocalFile());
+        auto source = std::make_unique<FileInputSource>(irFileURL.getLocalFile());
 
         if (source != nullptr) {
 
