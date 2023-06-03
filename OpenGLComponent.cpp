@@ -224,7 +224,7 @@ void OpenGLComponent::renderOpenGL()
 
                     vertices.add(vertex);
                 }
-            } else {
+            } else if (!secondarySources.empty()) {
                 auto color = glm::rgbColor(glm::vec3(360.0f - (10.0f * (float) secondarySources[0].order), 1.0f, 0.5f));
 
                 OpenGLUtils::Vertex vertex{
