@@ -44,6 +44,7 @@ RaumsimulationAudioProcessorEditor::RaumsimulationAudioProcessorEditor(Raumsimul
 
     settingsWindow.centreAroundComponent(this, settingsWindow.getWidth(), settingsWindow.getHeight());
     settingsWindow.setBackgroundColour(getLookAndFeel().findColour(ResizableWindow::backgroundColourId));
+    settingsWindow.addChangeListener(&impulseResponseComponent);
 
     auto normalSettings = Drawable::createFromImageData(BinaryData::settings_FILL0_wght100_GRAD25_opsz48_svg, BinaryData::settings_FILL0_wght100_GRAD25_opsz48_svgSize);
     auto overSettings   = Drawable::createFromImageData(BinaryData::settings_FILL0_wght100_GRAD200_opsz48_svg, BinaryData::settings_FILL0_wght100_GRAD200_opsz48_svgSize);

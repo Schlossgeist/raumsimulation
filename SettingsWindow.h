@@ -3,7 +3,8 @@
 #include <JuceHeader.h>
 #include "PluginProcessor.h"
 
-class SettingsWindow : public juce::DocumentWindow
+class SettingsWindow : public juce::DocumentWindow,
+                       public ChangeBroadcaster
 {
 public:
     SettingsWindow(RaumsimulationAudioProcessor&, juce::AudioProcessorValueTreeState&, const String& name, Colour backgroundColour, int requiredButtons, bool addToDesktop);
@@ -57,7 +58,8 @@ private:
             linesInWaveformSlider.setSliderStyle(juce::Slider::LinearBar);
             linesInWaveformSlider.setRange(0.0f, 15.0f, 1.0f);
             linesInWaveformSlider.setTooltip("Number of scale lines that are displayed with the waveform.");
-            linesInWaveformSlider.onValueChange = [this] { parentWindow.parameters.state.setProperty("lines_in_waveform", linesInWaveformSlider.getValue(), nullptr); };
+            linesInWaveformSlider.onValueChange = [this] { parentWindow.parameters.state.setProperty("lines_in_waveform", linesInWaveformSlider.getValue(), nullptr);
+                                                           parentWindow.sendChangeMessage(); };
             double linesInWaveform = parentWindow.parameters.state.getProperty("lines_in_waveform");
             linesInWaveformSlider.setValue(linesInWaveform, dontSendNotification);
 
