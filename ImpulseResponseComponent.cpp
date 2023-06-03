@@ -54,15 +54,17 @@ void ImpulseResponseComponent::paint(juce::Graphics & g)
     if (thumbnail.getTotalLength() > 0.0) {
         double ms = 0.0f;
         double numberOfLines = (int) parameters.state.getProperty("lines_in_waveform");;
+
+        double pixelPerMS = thumbArea.getWidth() / (thumbnail.getTotalLength() * 1000.0f);
         double stepMS = thumbnail.getTotalLength() * 1000.0f / numberOfLines;
         double roundedStep = floor((stepMS + 5.0f) / 10.0f) * 10.0f;
         while (ms < thumbnail.getTotalLength() * 1000.0f) {
             g.setColour(getLookAndFeel().findColour(0x0000002));
             g.setFont(8.0f);
-            g.drawText(String(ms) + " ms", thumbArea.getX() + (int) ms + 3, thumbArea.getY(), 25.0f, 10.0f, Justification::centredLeft, false);
+            g.drawText(String(ms) + " ms", thumbArea.getX() + (int) (pixelPerMS * ms) + 3, thumbArea.getY(), 25.0f, 10.0f, Justification::centredLeft, false);
 
             g.setColour(getLookAndFeel().findColour(0x0000001));
-            g.fillRect((float) (thumbArea.getX() + ms),(float) thumbArea.getY(), 1.0f,(float) thumbArea.getHeight());
+            g.fillRect((float) (thumbArea.getX() + pixelPerMS * ms),(float) thumbArea.getY(), 1.0f,(float) thumbArea.getHeight());
 
             ms += roundedStep;
         }
