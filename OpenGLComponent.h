@@ -554,6 +554,7 @@ public:
 
     Matrix3D<float> getProjectionMatrix() const;
     Matrix3D<float> getViewMatrix() const;
+    Matrix3D<float> getCoordProjectionMatrix() const;
 
     void setShaderProgram();
 
@@ -779,6 +780,9 @@ private:
     std::unique_ptr<OpenGLShaderProgram>        visualizationShader;
     std::shared_ptr<OpenGLUtils::Attributes>    visualizationAttributes;
     std::shared_ptr<OpenGLUtils::Uniforms>      visualizationUniforms;
+    std::unique_ptr<OpenGLShaderProgram>        coordShader;
+    std::shared_ptr<OpenGLUtils::Attributes>    coordAttributes;
+    std::shared_ptr<OpenGLUtils::Uniforms>      coordUniforms;
 
     CriticalSection shaderMutex;
     String statusText;
@@ -786,6 +790,7 @@ private:
     String newMicrophoneVertexShader, newMicrophoneFragmentShader;
     String newSpeakerVertexShader, newSpeakerFragmentShader;
     String newVisualizationVertexShader, newVisualizationFragmentShader;
+    String newCoordVertexShader, newCoordFragmentShader;
 
     void updateShader()
     {
@@ -843,6 +848,28 @@ private:
                 statusText = "GLSL: v" + String(OpenGLShaderProgram::getLanguageVersion(), 2);
             } else {
                 statusText = newVisualizationShader->getLastError();
+            }
+        }
+
+        if (newCoordVertexShader.isNotEmpty() || newCoordFragmentShader.isNotEmpty()) {
+            std::unique_ptr<OpenGLShaderProgram> newCoordShader(new OpenGLShaderProgram(openGLContext));
+
+            if (newCoordShader->addVertexShader(newCoordVertexShader)
+                && newCoordShader->addFragmentShader(newCoordFragmentShader)
+                && newCoordShader->link())
+            {
+                coordAttributes.reset();
+                coordUniforms.reset();
+
+                coordShader.reset(newCoordShader.release());
+                coordShader->use();
+
+                coordAttributes.reset(new OpenGLUtils::Attributes(*coordShader));
+                coordUniforms.reset(new OpenGLUtils::Uniforms(*coordShader));
+
+                statusText = "GLSL: v" + String(OpenGLShaderProgram::getLanguageVersion(), 2);
+            } else {
+                statusText = newCoordShader->getLastError();
             }
         }
 
@@ -909,5 +936,8 @@ private:
 
         newVisualizationVertexShader = {};
         newVisualizationFragmentShader = {};
+
+        newCoordVertexShader = {};
+        newCoordFragmentShader = {};
     }
 };

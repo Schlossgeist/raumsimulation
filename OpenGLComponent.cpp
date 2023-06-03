@@ -252,6 +252,99 @@ void OpenGLComponent::renderOpenGL()
     glDrawElements(GL_POINTS, secondarySourcesVertexBuffer.size, GL_UNSIGNED_INT, nullptr);
     visualizationAttributes->disable();
 
+    glViewport(0, 0,
+               roundToInt(desktopScale * (float)bounds.getWidth() / 10),
+               roundToInt(desktopScale * (float)bounds.getHeight() / 10));
+
+    coordShader->use();
+
+    if (coordUniforms->projectionMatrix != nullptr)
+        coordUniforms->projectionMatrix->setMatrix4(getCoordProjectionMatrix().mat, 1, false);
+
+    if (coordUniforms->viewMatrix != nullptr)
+        coordUniforms->viewMatrix->setMatrix4(getViewMatrix().mat, 1, false);
+
+    if (coordUniforms->positionMatrix != nullptr)
+        coordUniforms->positionMatrix->setMatrix4(Matrix3D<float>().mat, 1 ,false);
+
+    if (coordUniforms->rotationMatrix != nullptr)
+        coordUniforms->rotationMatrix->setMatrix4(Matrix3D<float>().mat, 1, false);
+
+    struct VertexBufferCoord
+    {
+        explicit VertexBufferCoord(OpenGLUtils::Vertex directionVertex)
+        {
+            using namespace ::juce::gl;
+
+            glGenBuffers(1, &vertexBuffer);
+            glBindBuffer(GL_ARRAY_BUFFER, vertexBuffer);
+
+            OpenGLUtils::Vertex originVertex{{0.0f, 0.0f, 0.0f},
+                    {0.0f, 0.0f, 0.0f},
+                    {0.0f, 0.0f, 0.0f, 0.0f},
+            };
+
+            Array<OpenGLUtils::Vertex> vertices{originVertex, directionVertex};
+
+            size = vertices.size();
+
+            glBufferData(GL_ARRAY_BUFFER, vertices.size() * (int)sizeof(OpenGLUtils::Vertex),
+                         vertices.getRawDataPointer(), GL_STATIC_DRAW);
+        }
+
+        ~VertexBufferCoord()
+        {
+            using namespace ::juce::gl;
+
+            glDeleteBuffers(1, &vertexBuffer);
+        }
+
+        void bind()
+        {
+            using namespace ::juce::gl;
+
+            glBindBuffer(GL_ARRAY_BUFFER, vertexBuffer);
+        }
+
+        int size;
+        GLuint vertexBuffer;
+
+        JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(VertexBufferCoord)
+    };
+
+    OpenGLUtils::Vertex xVertex{{1.0f, 0.0f, 0.0f},
+            {1.0f, 0.0f, 0.0f},
+            {1.0f, 0.0f, 0.0f, 1.0f},
+    };
+
+    OpenGLUtils::Vertex yVertex{{0.0f, 1.0f, 0.0f},
+            {0.0f, 1.0f, 0.0f},
+            {0.0f, 1.0f, 0.0f, 1.0f},
+    };
+
+    OpenGLUtils::Vertex zVertex{{0.0f, 0.0f, 1.0f},
+            {0.0f, 0.0f, 1.0f},
+            {0.0f, 0.0f, 1.0f, 1.0f},
+    };
+
+    VertexBufferCoord coordVertexBufferX(xVertex);
+    coordVertexBufferX.bind();
+    coordAttributes->enable();
+    glDrawElements(GL_LINES, coordVertexBufferX.size, GL_UNSIGNED_INT, nullptr);
+    coordAttributes->disable();
+
+    VertexBufferCoord coordVertexBufferY(yVertex);
+    coordVertexBufferY.bind();
+    coordAttributes->enable();
+    glDrawElements(GL_LINES, coordVertexBufferY.size, GL_UNSIGNED_INT, nullptr);
+    coordAttributes->disable();
+
+    VertexBufferCoord coordVertexBufferZ(zVertex);
+    coordVertexBufferZ.bind();
+    coordAttributes->enable();
+    glDrawElements(GL_LINES, coordVertexBufferZ.size, GL_UNSIGNED_INT, nullptr);
+    coordAttributes->disable();
+
 
     // Reset the element buffers so child Components draw correctly
     glBindBuffer(GL_ARRAY_BUFFER, 0);
@@ -284,6 +377,16 @@ Matrix3D<float> OpenGLComponent::getViewMatrix() const
                                       0.0f, 0.0f, 0.0f, 1.0f);      //   X             X
 
     return viewMatrix * rotationMatrix * flipMatrix;
+}
+
+Matrix3D<float> OpenGLComponent::getCoordProjectionMatrix() const
+{
+    const ScopedLock lock(mutex);
+
+    auto w = 0.25f;
+    auto h = w * bounds.toFloat().getAspectRatio(false);
+
+    return Matrix3D<float>::fromFrustum(-w, w, -h, h, 5.0f, 50.0f);
 }
 
 void OpenGLComponent::setShaderProgram()
@@ -383,6 +486,34 @@ void OpenGLComponent::setShaderProgram()
                }
             )";
     newVisualizationFragmentShader =
+            R"(#version 450
+               in vec4 destinationColor;
+
+               layout(location = 0) out vec4 color;
+
+               void main()
+               {
+                   color = destinationColor;
+               }
+            )";
+
+    newCoordVertexShader =
+            R"(#version 450
+               in vec4 position;
+               in vec4 sourceColor;
+
+               out vec4 destinationColor;
+
+               uniform mat4 projectionMatrix;
+               uniform mat4 viewMatrix;
+
+               void main()
+               {
+                   destinationColor = sourceColor;
+                   gl_Position = projectionMatrix * viewMatrix * position;
+               }
+            )";
+    newCoordFragmentShader =
             R"(#version 450
                in vec4 destinationColor;
 
