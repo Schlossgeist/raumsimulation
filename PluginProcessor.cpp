@@ -170,14 +170,18 @@ void RaumsimulationAudioProcessor::processBlock(juce::AudioBuffer<float>& buffer
 
     if (play && ir.getNumSamples() > 0) {
 
-        auto lengthInSecs = ir.getNumSamples()/globalSampleRate;
+        int readChannelNum = ir.getNumChannels();
 
         auto* writePtrArray = buffer.getArrayOfWritePointers();
         auto* readPtrArray = ir.getArrayOfReadPointers();
 
         for (auto sample = 0; sample < numSamples; ++sample) {
             for (auto channel = 0; channel < numChannels; ++channel) {
-                writePtrArray[channel][sample] += + readPtrArray[channel][irBufferPosition];
+                if (readChannelNum == 1) {  // Mono impulse response generated
+                    writePtrArray[channel][sample] += readPtrArray[0][irBufferPosition];
+                } else {
+                    writePtrArray[channel][sample] += readPtrArray[channel][irBufferPosition];
+                }
             }
             irBufferPosition++;
 
