@@ -5,7 +5,8 @@
 
 class ImpulseResponseComponent : public juce::Component,
                                  public ChangeListener,
-                                 public ChangeBroadcaster
+                                 public ChangeBroadcaster,
+                                 public SettableTooltipClient
 {
 public:
     ImpulseResponseComponent(RaumsimulationAudioProcessor&, juce::AudioProcessorValueTreeState&);
@@ -20,6 +21,7 @@ private:
     void saveFile();
     void setURL(const URL&);
     void changeListenerCallback(ChangeBroadcaster*) override;
+    void mouseMove(const MouseEvent& e) override;
 
     RaumsimulationAudioProcessor& audioProcessor;
     juce::AudioProcessorValueTreeState& parameters;

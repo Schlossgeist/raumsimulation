@@ -195,3 +195,12 @@ void ImpulseResponseComponent::changeListenerCallback (ChangeBroadcaster*)
 {
     repaint();
 }
+
+void ImpulseResponseComponent::mouseMove(const MouseEvent &e)
+{
+    auto thumbArea = getLocalBounds().reduced(5);
+    double msPerPixel = (thumbnail.getTotalLength() * 1000.0f) / thumbArea.getWidth();
+    if (e.getMouseDownX() > 5) {
+        setTooltip(juce::String::formatted("%.2f ms", (e.getMouseDownX() - 5) * msPerPixel, dontSendNotification));
+    }
+}
