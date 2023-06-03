@@ -122,6 +122,8 @@ void ImpulseResponseComponent::setURL(const URL& url)
 
 void ImpulseResponseComponent::updateThumbnail(double sampleRate)
 {
+    const MessageManagerLock messageManagerLock;
+
     thumbnail.setSource(&audioProcessor.ir, sampleRate, Uuid().hash());
     irFileLabel.setText(irFileURL.toString(false), sendNotificationAsync);
     irSizeLabel.setText(juce::String::formatted("%.2f s", thumbnail.getTotalLength()), dontSendNotification);
