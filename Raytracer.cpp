@@ -56,6 +56,7 @@ void Raytracer::run()
         }
 
         setStatusMessage("Casting rays...");
+        raysPerSource = (int) parameters.state.getProperty("rays_per_source");
 
         for (int speakerNum = 0; speakerNum < speakers.size(); speakerNum++) {
             setStatusMessage("Casting Rays for source " + String(speakerNum + 1) + " / " + String(speakers.size()));
@@ -160,7 +161,9 @@ void Raytracer::run()
 
         double latestReflectionS = histograms.at(activeMicrophoneName)[histograms.at(activeMicrophoneName).size() - 1].delayMS / 1000.0f;
 
-        buffer.setSize(audioProcessor.ir.getNumChannels(),
+        int numChannels = (bool) parameters.state.getProperty("stereo_ir") ? 2 : 1;
+
+        buffer.setSize(numChannels,
                        (int) (audioProcessor.globalSampleRate * (latestReflectionS + 0.1f)),
                        false,
                        true,

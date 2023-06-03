@@ -77,7 +77,7 @@ public:
     };
 
     const int maxBounces = 10;
-    const int raysPerSource = 1000;
+    int raysPerSource = 1000;
     const float speedOfSoundMpS = 343.0f;
 
     struct Ray {

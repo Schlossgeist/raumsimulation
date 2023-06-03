@@ -199,29 +199,46 @@ void OpenGLComponent::renderOpenGL()
 
     struct VertexBuffer
     {
-        explicit VertexBuffer(std::vector<Raytracer::SecondarySource>& secondarySources)
+        explicit VertexBuffer(std::vector<Raytracer::SecondarySource>& secondarySources, float percentage)
         {
             using namespace ::juce::gl;
-
-            size = secondarySources.size();
 
             glGenBuffers(1, &vertexBuffer);
             glBindBuffer(GL_ARRAY_BUFFER, vertexBuffer);
 
             Array<OpenGLUtils::Vertex> vertices;
 
-            for (auto secondarySource : secondarySources) {
+            if (percentage > 0.0f) {
+                for (int i = 0; i < secondarySources.size(); i ++) {
+                    if (i % (int) (100.0f/percentage) != 0) {
+                        continue;
+                    }
 
-                auto color = glm::rgbColor(glm::vec3(360.0f - (10.0f * (float) secondarySource.order), 1.0f, 0.5f));
+                    auto color = glm::rgbColor(glm::vec3(360.0f - (10.0f * (float) secondarySources[i].order), 1.0f, 0.5f));
+
+                    OpenGLUtils::Vertex vertex{
+                            {secondarySources[i].position.x, secondarySources[i].position.y, secondarySources[i].position.z},
+                            {secondarySources[i].normal.x, secondarySources[i].normal.y, secondarySources[i].normal.z},
+                            {color.r, color.g, color.b, 0.5f},
+                    };
+
+                    vertices.add(vertex);
+                }
+            } else {
+                auto color = glm::rgbColor(glm::vec3(360.0f - (10.0f * (float) secondarySources[0].order), 1.0f, 0.5f));
 
                 OpenGLUtils::Vertex vertex{
-                        {secondarySource.position.x, secondarySource.position.y, secondarySource.position.z},
-                        {secondarySource.normal.x, secondarySource.normal.y, secondarySource.normal.z},
+                        {secondarySources[0].position.x, secondarySources[0].position.y, secondarySources[0].position.z},
+                        {secondarySources[0].normal.x, secondarySources[0].normal.y, secondarySources[0].normal.z},
                         {color.r, color.g, color.b, 0.5f},
                 };
 
                 vertices.add(vertex);
             }
+
+
+
+            size = vertices.size();
 
             glBufferData(GL_ARRAY_BUFFER, vertices.size() * (int)sizeof(OpenGLUtils::Vertex),
                          vertices.getRawDataPointer(), GL_STATIC_DRAW);
@@ -247,7 +264,9 @@ void OpenGLComponent::renderOpenGL()
         JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(VertexBuffer)
     };
 
-    VertexBuffer secondarySourcesVertexBuffer(raytracer.secondarySources);
+    float pointsInVisualizer = (float) parameters.state.getProperty("points_in_visualizer");
+
+    VertexBuffer secondarySourcesVertexBuffer(raytracer.secondarySources, pointsInVisualizer);
 
     secondarySourcesVertexBuffer.bind();
 

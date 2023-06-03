@@ -53,7 +53,7 @@ void ImpulseResponseComponent::paint(juce::Graphics & g)
 
     if (thumbnail.getTotalLength() > 0.0) {
         double ms = 0.0f;
-        double numberOfLines = 7.0f;
+        double numberOfLines = (int) parameters.state.getProperty("lines_in_waveform");;
         double stepMS = thumbnail.getTotalLength() * 1000.0f / numberOfLines;
         double roundedStep = floor((stepMS + 5.0f) / 10.0f) * 10.0f;
         while (ms < thumbnail.getTotalLength() * 1000.0f) {
