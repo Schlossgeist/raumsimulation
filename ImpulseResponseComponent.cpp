@@ -61,7 +61,12 @@ void ImpulseResponseComponent::paint(juce::Graphics & g)
         while (ms < thumbnail.getTotalLength() * 1000.0f) {
             g.setColour(getLookAndFeel().findColour(0x0000002));
             g.setFont(8.0f);
-            g.drawText(String(ms) + " ms", thumbArea.getX() + (int) (pixelPerMS * ms) + 3, thumbArea.getY(), 25.0f, 10.0f, Justification::centredLeft, false);
+
+            if (ms < 1000.0f) {
+                g.drawText(String(ms) + " ms", thumbArea.getX() + (int) (pixelPerMS * ms) + 3, thumbArea.getY(), 25.0f, 10.0f, Justification::centredLeft, false);
+            } else {
+                g.drawText(String(ms / 1000.0f) + " s", thumbArea.getX() + (int) (pixelPerMS * ms) + 3, thumbArea.getY(), 25.0f, 10.0f, Justification::centredLeft, false);
+            }
 
             g.setColour(getLookAndFeel().findColour(0x0000001));
             g.fillRect((float) (thumbArea.getX() + pixelPerMS * ms),(float) thumbArea.getY(), 1.0f,(float) thumbArea.getHeight());
@@ -200,7 +205,13 @@ void ImpulseResponseComponent::mouseMove(const MouseEvent &e)
 {
     auto thumbArea = getLocalBounds().reduced(5);
     double msPerPixel = (thumbnail.getTotalLength() * 1000.0f) / thumbArea.getWidth();
+    double ms = (e.getMouseDownX() - 5) * msPerPixel;
+
     if (e.getMouseDownX() > 5) {
-        setTooltip(juce::String::formatted("%.2f ms", (e.getMouseDownX() - 5) * msPerPixel, dontSendNotification));
+        if (ms < 1000.0f) {
+            setTooltip(juce::String::formatted("%.2f ms", ms, dontSendNotification));
+        } else {
+            setTooltip(juce::String::formatted("%.2f s", ms / 1000.0f, dontSendNotification));
+        }
     }
 }
