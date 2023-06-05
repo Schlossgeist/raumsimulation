@@ -76,7 +76,6 @@ public:
         glm::vec3 position = {0.0f, 0.0f, 0.0f};
     };
 
-    const int maxBounces = 10;
     int raysPerSource = 1000;
     const float speedOfSoundMpS = 343.0f;
 

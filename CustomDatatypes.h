@@ -5,6 +5,21 @@
 struct Band6Coefficients {
     float coefficients[6]{1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f,};
 
+    float getAverage()
+    {
+        float sum = 0;
+        for (float coefficient : coefficients) {
+            sum += coefficient;
+        }
+
+        return sum/6;
+    }
+
+    float getRelativeVolumeDB()
+    {
+        return 10*log10(getAverage());
+    }
+
     float& operator[](const int index) const {
         if (0 <= index && index < 6) {
             return (float&) coefficients[index];

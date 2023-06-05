@@ -8,11 +8,14 @@ Raytracer::Raytracer(RaumsimulationAudioProcessor& p, juce::AudioProcessorValueT
     , impulseResponseComponent(irc)
     , ThreadWithProgressWindow(windowTitle, hasProgressBar, hasCancelButton, timeOutMsWhenCancelling, cancelButtonText, componentToCentreAround)
 {
-    objects.push_back({"Mic1", Object::Type::MICROPHONE, true, glm::vec3{2.5f, 3.5f, 2.0f}});
-    objects.push_back({"Spk1", Object::Type::SPEAKER, true, glm::vec3{7.0f, -1.0f, 3.0f}});
+    objects.push_back({"Mic1", Object::Type::MICROPHONE, false, glm::vec3{2.5f, 3.5f, 2.0f}});
+    objects.push_back({"Spk1", Object::Type::SPEAKER, false, glm::vec3{7.0f, -1.0f, 3.0f}});
 
     objects.push_back({"Mic2", Object::Type::MICROPHONE, false, glm::vec3{0.5f, 0.5f, 2.0f}});
     objects.push_back({"Spk2", Object::Type::SPEAKER, false, glm::vec3{3.0f, 1.0f, 3.0f}});
+
+    objects.push_back({"Mic3", Object::Type::MICROPHONE, true, glm::vec3{1.5f, 0.5f, 2.0f}});
+    objects.push_back({"Spk3", Object::Type::SPEAKER, true, glm::vec3{-3.0f, 2.0f, 3.0f}});
 }
 
 void Raytracer::setRoom(const File& objFile)
@@ -379,7 +382,7 @@ void Raytracer::trace(Raytracer::Ray ray)
 {
     SecondarySource secondarySource;
 
-    for (int bounce = 0; bounce < maxBounces; bounce++) {
+    while (secondarySource.energyCoefficients.getRelativeVolumeDB() > -60.0f) {
         Hit hit = calculateBounce(ray);
 
         if (hit.hitSurface) {
