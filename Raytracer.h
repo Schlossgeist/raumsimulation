@@ -42,7 +42,7 @@ public:
             }
 
             float totalB = 0;
-            for (float coefficient : a.energyCoefficients.coefficients) {
+            for (float coefficient : b.energyCoefficients.coefficients) {
                 totalB += coefficient;
             }
 
