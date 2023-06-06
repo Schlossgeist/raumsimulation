@@ -3,6 +3,7 @@
 #include "PluginProcessor.h"
 #include "Raytracer.h"
 #include "WavefrontObjParser.h"
+#include <glm/glm.hpp>
 #include <JuceHeader.h>
 
 struct OpenGLUtils

@@ -29,7 +29,7 @@
 
 #include <JuceHeader.h>
 #include "OpenGLComponent.h"
-#include "externals/glm/glm/gtx/color_space.hpp"
+#include <glm/gtx/color_space.hpp>
 
 //==============================================================================
 OpenGLComponent::OpenGLComponent(RaumsimulationAudioProcessor& p, juce::AudioProcessorValueTreeState& pts, Raytracer& r)

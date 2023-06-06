@@ -1,6 +1,6 @@
 #include "Raytracer.h"
 #include "ImpulseResponseComponent.h"
-#include "externals/glm/glm/gtx/vector_angle.hpp"
+#include <glm/gtx/vector_angle.hpp>
 
 Raytracer::Raytracer(RaumsimulationAudioProcessor& p, juce::AudioProcessorValueTreeState& pts, ImpulseResponseComponent& irc, const String &windowTitle, bool hasProgressBar, bool hasCancelButton, int timeOutMsWhenCancelling, const String &cancelButtonText, Component *componentToCentreAround)
     : audioProcessor(p)

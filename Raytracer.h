@@ -4,8 +4,8 @@
 #include "ImpulseResponseComponent.h"
 #include "PluginProcessor.h"
 #include "WavefrontObjParser.h"
-#include "externals/glm/glm/ext.hpp"
-#include "externals/glm/glm/glm.hpp"
+#include <glm/ext.hpp>
+#include <glm/glm.hpp>
 #include <JuceHeader.h>
 
 class Raytracer : public juce::ThreadWithProgressWindow

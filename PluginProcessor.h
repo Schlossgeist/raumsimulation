@@ -9,8 +9,6 @@
 #pragma once
 
 #include <JuceHeader.h>
-#include "externals/glm/glm/glm.hpp"
-#include "externals/glm/glm/ext.hpp"
 
 //==============================================================================
 /**

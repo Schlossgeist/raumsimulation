@@ -20,8 +20,8 @@
 #pragma once
 
 #include "CustomDatatypes.h"
-#include "externals/glm/glm/glm.hpp"
-#include "externals/glm/glm/ext.hpp"
+#include <glm/glm.hpp>
+#include <glm/ext.hpp>
 
 using namespace juce;
 //==============================================================================
