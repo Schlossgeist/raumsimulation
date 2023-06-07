@@ -283,6 +283,7 @@ private:
              newObject.position = {xPositionSlider.getValue(), yPositionSlider.getValue(), zPositionSlider.getValue()};
 
              parentWindow.raytracer.objects.push_back(newObject);
+             parentWindow.raytracer.saveObjects();
         }
 
         void deleteObject()
@@ -294,6 +295,7 @@ private:
              }
 
              populateObjectMenu();
+             parentWindow.raytracer.saveObjects();
         }
 
         void updateObjectProperties()
@@ -309,6 +311,8 @@ private:
                     object.position.z = (float) zPositionSlider.getValue();
                 }
             }
+
+            parentWindow.raytracer.saveObjects();
         }
 
         bool checkNameAlreadyTaken(const String& name)

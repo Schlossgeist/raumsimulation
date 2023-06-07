@@ -91,6 +91,8 @@ public:
 
     void run() override;
     void setRoom(const File& objFile);
+    void saveObjects();
+    void restoreObjects();
 
     std::vector<Object> objects;
     std::map<String, std::vector<EnergyPortion>> histograms;

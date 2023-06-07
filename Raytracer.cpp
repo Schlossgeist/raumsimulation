@@ -8,14 +8,16 @@ Raytracer::Raytracer(RaumsimulationAudioProcessor& p, juce::AudioProcessorValueT
     , impulseResponseComponent(irc)
     , ThreadWithProgressWindow(windowTitle, hasProgressBar, hasCancelButton, timeOutMsWhenCancelling, cancelButtonText, componentToCentreAround)
 {
-    objects.push_back({"Mic1", Object::Type::MICROPHONE, false, glm::vec3{2.5f, 3.5f, 2.0f}});
-    objects.push_back({"Spk1", Object::Type::SPEAKER, false, glm::vec3{7.0f, -1.0f, 3.0f}});
+//    objects.push_back({"Mic1", Object::Type::MICROPHONE, false, glm::vec3{2.5f, 3.5f, 2.0f}});
+//    objects.push_back({"Spk1", Object::Type::SPEAKER, false, glm::vec3{7.0f, -1.0f, 3.0f}});
+//
+//    objects.push_back({"Mic2", Object::Type::MICROPHONE, false, glm::vec3{0.5f, 0.5f, 2.0f}});
+//    objects.push_back({"Spk2", Object::Type::SPEAKER, false, glm::vec3{3.0f, 1.0f, 3.0f}});
+//
+//    objects.push_back({"Mic3", Object::Type::MICROPHONE, true, glm::vec3{1.5f, 0.5f, 2.0f}});
+//    objects.push_back({"Spk3", Object::Type::SPEAKER, true, glm::vec3{-3.0f, 2.0f, 3.0f}});
 
-    objects.push_back({"Mic2", Object::Type::MICROPHONE, false, glm::vec3{0.5f, 0.5f, 2.0f}});
-    objects.push_back({"Spk2", Object::Type::SPEAKER, false, glm::vec3{3.0f, 1.0f, 3.0f}});
-
-    objects.push_back({"Mic3", Object::Type::MICROPHONE, true, glm::vec3{1.5f, 0.5f, 2.0f}});
-    objects.push_back({"Spk3", Object::Type::SPEAKER, true, glm::vec3{-3.0f, 2.0f, 3.0f}});
+    restoreObjects();
 }
 
 void Raytracer::setRoom(const File& objFile)
@@ -523,4 +525,48 @@ bool Raytracer::checkVisibility(glm::vec3 positionA, glm::vec3 positionB)
     }
 
     return true;
+}
+
+void Raytracer::saveObjects()
+{
+    parameters.state.getOrCreateChildWithName("Objects", nullptr).removeAllChildren(nullptr);
+
+    for (const auto& object : objects) {
+        ValueTree objectTree("Object");
+
+        objectTree.setProperty("Name", object.name, nullptr);
+        objectTree.setProperty("Type", object.type, nullptr);
+        objectTree.setProperty("Active", object.active, nullptr);
+
+        ValueTree positionTree("Position");
+        positionTree.setProperty("X", object.position.x, nullptr);
+        positionTree.setProperty("Y", object.position.y, nullptr);
+        positionTree.setProperty("Z", object.position.z, nullptr);
+
+        objectTree.appendChild(positionTree, nullptr);
+
+        parameters.state.getOrCreateChildWithName("Objects", nullptr).appendChild(objectTree, nullptr);
+    }
+}
+
+void Raytracer::restoreObjects()
+{
+    auto objectTree = parameters.state.getChildWithName("Objects");
+
+    for (int i = 0; i < objectTree.getNumChildren(); i++) {
+        auto childTree = objectTree.getChild(i);
+        Object object;
+
+        object.type = static_cast<Object::Type>((int) childTree.getProperty("Type"));
+        object.name = childTree.getProperty("Name");
+        object.active = childTree.getProperty("Active");
+
+        auto positionTree = childTree.getChildWithName("Position");
+
+        object.position.x = positionTree.getProperty("X");
+        object.position.y = positionTree.getProperty("Y");
+        object.position.z = positionTree.getProperty("Z");
+
+        objects.push_back(object);
+    }
 }
