@@ -91,6 +91,7 @@ RaumsimulationAudioProcessorEditor::RaumsimulationAudioProcessorEditor(Raumsimul
                                downEdit.get());
     editObjectButton.onClick = [this] { objectWindow.openWindow(ObjectWindow::Mode::EDIT); };
 
+    raytracer.addChangeListener(&openGLComponent);
 }
 
 RaumsimulationAudioProcessorEditor::~RaumsimulationAudioProcessorEditor()

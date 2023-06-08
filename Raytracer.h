@@ -8,7 +8,8 @@
 #include <glm/glm.hpp>
 #include <JuceHeader.h>
 
-class Raytracer : public juce::ThreadWithProgressWindow
+class Raytracer : public juce::ThreadWithProgressWindow,
+                  public ChangeBroadcaster
 {
 public:
     Raytracer(RaumsimulationAudioProcessor&, juce::AudioProcessorValueTreeState&, ImpulseResponseComponent&, const String &windowTitle, bool hasProgressBar, bool hasCancelButton, int timeOutMsWhenCancelling, const String &cancelButtonText, Component *componentToCentreAround);
@@ -78,6 +79,8 @@ public:
 
     int raysPerSource = 1000;
     const float speedOfSoundMpS = 343.0f;
+    int minOrder = 1;
+    int maxOrder = 1;
 
     struct Ray {
         glm::vec3 position;

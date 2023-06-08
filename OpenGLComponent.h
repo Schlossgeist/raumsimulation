@@ -538,6 +538,7 @@ struct OpenGLUtils
 
 class OpenGLComponent: public juce::Component,
                        public juce::OpenGLRenderer,
+                       public ChangeListener,
                        private juce::AsyncUpdater
 {
 public:
@@ -552,6 +553,11 @@ public:
     void newOpenGLContextCreated() override;
     void openGLContextClosing() override;
     void renderOpenGL() override;
+
+    void changeListenerCallback(juce::ChangeBroadcaster *source) override
+    {
+        controlsOverlay->repaint();
+    }
 
     Matrix3D<float> getProjectionMatrix() const;
     Matrix3D<float> getViewMatrix() const;
@@ -632,6 +638,47 @@ private:
             objFileLabel.setText(openGLComponent.objFileURL.toString(false), sendNotificationAsync);
 
             lookAndFeelChanged();
+        }
+
+        void paint(juce::Graphics& g) override
+        {
+            auto area = getLocalBounds().reduced(5);
+
+            if (openGLComponent.raytracer.minOrder < openGLComponent.raytracer.maxOrder) {   // Right side legend
+                auto right = area.removeFromRight(10);
+                right.reduce(0, area.getHeight()/4);
+
+                float startHue  = 1.00f;
+                float endHue    = 0.75f;
+
+                auto gradient = ColourGradient::vertical(
+                        Colour::fromHSV(startHue, 1.0f, 0.5f, 1.0f),
+                        Colour::fromHSV(endHue, 1.0f, 0.5f, 1.0f),
+                        right);
+
+                float step = (1 - endHue) / (float) openGLComponent.raytracer.maxOrder;
+                for (int i = openGLComponent.raytracer.minOrder; i < openGLComponent.raytracer.maxOrder; i++) {
+                    gradient.addColour((float) i / (float) openGLComponent.raytracer.maxOrder, Colour::fromHSV(1.0f - step * (float) i, 1.0f, 0.5f, 1.0f));
+                }
+
+                g.setFillType(gradient);
+                g.fillRoundedRectangle((float) right.getX(), (float) right.getY(), (float) right.getWidth(), (float) right.getHeight(), 5.0f);
+
+                auto order = area.removeFromRight(100);
+                order.reduce(0, area.getHeight()/4);
+
+                auto min = order.removeFromTop(15);
+                auto max = order.removeFromBottom(15);
+
+                g.setFillType(getLookAndFeel().findColour(Label::textColourId));
+                g.drawText(String(openGLComponent.raytracer.minOrder), min, Justification::right, false);
+                g.drawText(String(openGLComponent.raytracer.maxOrder), max, Justification::right, false);
+
+                // make the area a square so the text is vertical on the right side after a 90-degree rotation with top-justification
+                order.expand(0, (order.getWidth() - order.getHeight()) / 2);
+                g.addTransform(AffineTransform::rotation(MathConstants<float>::pi / 2.0f, (float) order.getCentreX(), (float) order.getCentreY()));
+                g.drawText("Reflection Order", order, Justification::centredTop, false);
+            }
         }
 
         void resized() override

@@ -32,6 +32,9 @@ void Raytracer::run()
     setRoom(objFileURL.getLocalFile());
     sleep(1000);
 
+    minOrder = 1;
+    maxOrder = 1;
+
     String activeMicrophoneName;
 
     for (const auto& object : objects) {
@@ -398,6 +401,16 @@ void Raytracer::trace(Raytracer::Ray ray)
 
             auto recordedSecondarySource = secondarySource;
             recordedSecondarySource.energyCoefficients *= hit.materialProperties.roughness;
+
+            if (recordedSecondarySource.order < minOrder) {
+                minOrder = recordedSecondarySource.order;
+                sendChangeMessage();
+            }
+
+            if (recordedSecondarySource.order > maxOrder) {
+                maxOrder = recordedSecondarySource.order;
+                sendChangeMessage();
+            }
 
             secondarySources.push_back(recordedSecondarySource);
 
