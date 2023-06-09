@@ -100,12 +100,11 @@ public:
     std::vector<Object> objects;
     std::map<String, std::vector<EnergyPortion>> histograms;
 
-    std::vector<EnergyPortion> extractHistogramSlice(double startTimeMS, double endTimeMS, const String& activeMicrophoneName)
+    std::vector<EnergyPortion> extractHistogramSlice(double startTimeMS, double endTimeMS, const std::vector<EnergyPortion>& energyPortions)
     {
-        std::vector<EnergyPortion> result;
+        // energyPortions has to be sorted byDelay
 
-        auto energyPortions = histograms.at(activeMicrophoneName);
-        std::sort(energyPortions.begin(), energyPortions.end(), EnergyPortion::byDelay);
+        std::vector<EnergyPortion> result;
 
         for (auto& energyPortion : energyPortions) {
             if (endTimeMS < energyPortion.delayMS) {

@@ -236,11 +236,14 @@ void Raytracer::run()
     {
         AudioBuffer<float> gainCurveBuffers[6] = {buffer, buffer, buffer, buffer, buffer, buffer};
 
+        auto energyPortions = histograms.at(activeMicrophoneName);
+        std::sort(energyPortions.begin(), energyPortions.end(), EnergyPortion::byDelay);
+
         float gain = 0.0f;
         for (int sample = 0; sample < buffer.getNumSamples(); sample++) {
             double startTimeMS = sample / audioProcessor.globalSampleRate * 1000.0f;
             double endTimeMS = startTimeMS + 1000.0f/audioProcessor.globalSampleRate;
-            auto slice = extractHistogramSlice(startTimeMS, endTimeMS, activeMicrophoneName);
+            auto slice = extractHistogramSlice(startTimeMS, endTimeMS, energyPortions);
 
             for (int channel = 0; channel < buffer.getNumChannels(); channel++) {
                 for (int i = 0; i < 6; i++) {
