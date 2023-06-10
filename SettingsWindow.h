@@ -85,13 +85,14 @@ private:
         void resized() override
         {
             auto area = getLocalBounds().reduced(5);
+            float labelWidthRatio = 0.5f;
 
             {   // General Settings
                 auto generalSettingsArea = area.removeFromTop(50);
                 generalSettingsLabel.           setBounds(generalSettingsArea.removeFromTop(25));
 
                 auto samplerateArea = generalSettingsArea.removeFromTop(25);
-                samplerateLabel.                setBounds(samplerateArea.removeFromLeft(samplerateArea.getWidth()/3));
+                samplerateLabel.                setBounds(samplerateArea.removeFromLeft((int) (labelWidthRatio * (float) samplerateArea.getWidth())));
                 samplerateValueLabel.           setBounds(samplerateArea);
             }
 
@@ -100,11 +101,11 @@ private:
                 raytracerSettingsLabel.         setBounds(raytracerSettingsArea.removeFromTop(25));
 
                 auto raysPerSourceArea = raytracerSettingsArea.removeFromTop(25);
-                raysPerSourceLabel.             setBounds(raysPerSourceArea.removeFromLeft(raysPerSourceArea.getWidth()/3));
+                raysPerSourceLabel.             setBounds(raysPerSourceArea.removeFromLeft((int) (labelWidthRatio * (float) raysPerSourceArea.getWidth())));
                 raysPerSourceSlider.            setBounds(raysPerSourceArea);
 
                 auto pointsInVisualizerArea = raytracerSettingsArea.removeFromTop(25);
-                pointsInVisualizerLabel.        setBounds(pointsInVisualizerArea.removeFromLeft(pointsInVisualizerArea.getWidth()/3));
+                pointsInVisualizerLabel.        setBounds(pointsInVisualizerArea.removeFromLeft((int) (labelWidthRatio * (float) pointsInVisualizerArea.getWidth())));
                 pointsInVisualizerSlider.       setBounds(pointsInVisualizerArea);
             }
 
@@ -113,15 +114,15 @@ private:
                 irSettingsLabel.                setBounds(irSettingsArea.removeFromTop(25));
 
                 auto linesInWaveformArea = irSettingsArea.removeFromTop(25);
-                linesInWaveformLabel.           setBounds(linesInWaveformArea.removeFromLeft(linesInWaveformArea.getWidth()/3));
+                linesInWaveformLabel.           setBounds(linesInWaveformArea.removeFromLeft((int) (labelWidthRatio * (float) linesInWaveformArea.getWidth())));
                 linesInWaveformSlider.          setBounds(linesInWaveformArea);
 
                 auto stereoIRArea = irSettingsArea.removeFromTop(25);
-                stereoLabel.                    setBounds(stereoIRArea.removeFromLeft(stereoIRArea.getWidth()/3));
+                stereoLabel.                    setBounds(stereoIRArea.removeFromLeft((int) (labelWidthRatio * (float) stereoIRArea.getWidth())));
                 stereoToggle.                   setBounds(stereoIRArea);
 
                 auto whiteNoiseArea = irSettingsArea.removeFromTop(25);
-                whiteNoiseLabel.                setBounds(whiteNoiseArea.removeFromLeft(whiteNoiseArea.getWidth()/3));
+                whiteNoiseLabel.                setBounds(whiteNoiseArea.removeFromLeft((int) (labelWidthRatio * (float) whiteNoiseArea.getWidth())));
                 whiteNoiseToggle.               setBounds(whiteNoiseArea);
             }
         }
