@@ -177,54 +177,67 @@ void Raytracer::run()
                        true,
                        false);
 
-        double endOfPreviousIntervalMS = histograms.at(activeMicrophoneName)[0].delayMS;
+        bool const useWhiteNoise = parameters.state.getProperty("use_white_noise");
 
-        setStatusMessage("Generating dirac sequence...");
-
-        while (endOfPreviousIntervalMS < latestReflectionS * 1000.0f) {
-            // random value from nextDouble() is in range 0 (inclusive) to 1.0 (exclusive),
-            // but here range 0 (exclusive) to 1.0 (inclusive) is needed because this value is used as a denominator
-            double randomNumber = abs(randomGenerator.nextDouble() - 1);
-            double currentTimeMS = endOfPreviousIntervalMS;
-
-            /**
-             * @see Section 5.3.4 in Dirk Schröder, Physically Based Real-Time Auralization of Interactive Virtual Environments
-             */
-
-            double speedOfSound3MpS = speedOfSoundMpS * speedOfSoundMpS * speedOfSoundMpS;
-            double currentTime2S = (currentTimeMS / 1000.0f) * (currentTimeMS / 1000.0f);
-            double volumeM3 = 650.0f;
-
-            double u = (4.0f * glm::pi<double>() * speedOfSound3MpS * currentTime2S) / volumeM3;
-
-            if (u > 10000.0f) {
-                u = 10000.0f;
-            }
-
-            double intervalSizeMS = 1 / u * log(1 / randomNumber) * 1000.0f;
-
-            double lengthOfSampleMS = 1 / audioProcessor.globalSampleRate * 1000.0f;
-
-            if (intervalSizeMS < lengthOfSampleMS) {
-                intervalSizeMS = lengthOfSampleMS;
-            }
-
-            float dirac = 1.0f;
-
-            if (randomGenerator.nextDouble() > 0.5f) {
-                dirac = -1.0f;
-            }
-
-            double eventTimeMS = currentTimeMS + randomGenerator.nextDouble() * intervalSizeMS;
-
-            int sample = (int) (eventTimeMS * audioProcessor.globalSampleRate / 1000.0f);
+        if (useWhiteNoise) {
+            setStatusMessage("Generating white noise...");
 
             auto *writePtrArray = buffer.getArrayOfWritePointers();
             for (int channel = 0; channel < buffer.getNumChannels(); channel++) {
-                writePtrArray[channel][sample] = dirac;
+                for (int sample = 0; sample < buffer.getNumSamples(); sample++) {
+                    writePtrArray[channel][sample] = (randomGenerator.nextFloat() - 0.5f) * 2.0f;
+                }
             }
+        } else {
+            double endOfPreviousIntervalMS = histograms.at(activeMicrophoneName)[0].delayMS;
 
-            endOfPreviousIntervalMS += intervalSizeMS;
+            setStatusMessage("Generating dirac sequence...");
+
+            while (endOfPreviousIntervalMS < latestReflectionS * 1000.0f) {
+                // random value from nextDouble() is in range 0 (inclusive) to 1.0 (exclusive),
+                // but here range 0 (exclusive) to 1.0 (inclusive) is needed because this value is used as a denominator
+                double randomNumber = abs(randomGenerator.nextDouble() - 1);
+                double currentTimeMS = endOfPreviousIntervalMS;
+
+                /**
+                 * @see Section 5.3.4 in Dirk Schröder, Physically Based Real-Time Auralization of Interactive Virtual Environments
+                 */
+
+                double speedOfSound3MpS = speedOfSoundMpS * speedOfSoundMpS * speedOfSoundMpS;
+                double currentTime2S = (currentTimeMS / 1000.0f) * (currentTimeMS / 1000.0f);
+                double volumeM3 = roomVolumeM3;
+
+                double u = (4.0f * glm::pi<double>() * speedOfSound3MpS * currentTime2S) / volumeM3;
+
+                if (u > 10000.0f) {
+                    u = 10000.0f;
+                }
+
+                double intervalSizeMS = 1 / u * log(1 / randomNumber) * 1000.0f;
+
+                double lengthOfSampleMS = 1 / audioProcessor.globalSampleRate * 1000.0f;
+
+                if (intervalSizeMS < lengthOfSampleMS) {
+                    intervalSizeMS = lengthOfSampleMS;
+                }
+
+                float dirac = 1.0f;
+
+                if (randomGenerator.nextDouble() > 0.5f) {
+                    dirac = -1.0f;
+                }
+
+                double eventTimeMS = currentTimeMS + randomGenerator.nextDouble() * intervalSizeMS;
+
+                int sample = (int) (eventTimeMS * audioProcessor.globalSampleRate / 1000.0f);
+
+                auto *writePtrArray = buffer.getArrayOfWritePointers();
+                for (int channel = 0; channel < buffer.getNumChannels(); channel++) {
+                    writePtrArray[channel][sample] = dirac;
+                }
+
+                endOfPreviousIntervalMS += intervalSizeMS;
+            }
         }
 
         sleep(1000);

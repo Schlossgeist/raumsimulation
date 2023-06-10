@@ -69,6 +69,13 @@ private:
             stereoToggle.onStateChange = [this] { parentWindow.parameters.state.setProperty("stereo_ir", stereoToggle.getToggleState(), nullptr);  };
             bool stereoIR = parentWindow.parameters.state.getProperty("stereo_ir");
             stereoToggle.setToggleState(stereoIR, dontSendNotification);
+
+            addAndMakeVisible(whiteNoiseLabel);
+            addAndMakeVisible(whiteNoiseToggle);
+            whiteNoiseToggle.setTooltip("Whether to use white noise or dirac impulses for generating impulse responses.");
+            whiteNoiseToggle.onStateChange = [this] { parentWindow.parameters.state.setProperty("use_white_noise", whiteNoiseToggle.getToggleState(), nullptr);  };
+            bool useWhiteNoise = parentWindow.parameters.state.getProperty("use_white_noise");
+            whiteNoiseToggle.setToggleState(useWhiteNoise, dontSendNotification);
         };
 
         void paint(juce::Graphics & g) override
@@ -102,7 +109,7 @@ private:
             }
 
             {   // IR Settings
-                auto irSettingsArea = area.removeFromTop(75);
+                auto irSettingsArea = area.removeFromTop(100);
                 irSettingsLabel.                setBounds(irSettingsArea.removeFromTop(25));
 
                 auto linesInWaveformArea = irSettingsArea.removeFromTop(25);
@@ -112,6 +119,10 @@ private:
                 auto stereoIRArea = irSettingsArea.removeFromTop(25);
                 stereoLabel.                    setBounds(stereoIRArea.removeFromLeft(stereoIRArea.getWidth()/3));
                 stereoToggle.                   setBounds(stereoIRArea);
+
+                auto whiteNoiseArea = irSettingsArea.removeFromTop(25);
+                whiteNoiseLabel.                setBounds(whiteNoiseArea.removeFromLeft(whiteNoiseArea.getWidth()/3));
+                whiteNoiseToggle.               setBounds(whiteNoiseArea);
             }
         }
 
@@ -121,8 +132,7 @@ private:
         Label           generalSettingsLabel{{}, "General"};
         Label           samplerateLabel{{}, "Rendering Samplerate"};
         Label           samplerateValueLabel{{}, "0"};
-        Label           stereoLabel{{}, "Generate Stereo IRs"};
-        ToggleButton    stereoToggle;
+
 
         Label           raytracerSettingsLabel{{}, "Raytracer"};
         Label           raysPerSourceLabel{{}, "Rays per Source"};
@@ -133,6 +143,10 @@ private:
         Label           irSettingsLabel{{}, "Impulse Response"};
         Label           linesInWaveformLabel{{}, "Lines in waveform display"};
         Slider          linesInWaveformSlider;
+        Label           stereoLabel{{}, "Generate Stereo IRs"};
+        ToggleButton    stereoToggle;
+        Label           whiteNoiseLabel{{}, "Use white noise"};
+        ToggleButton    whiteNoiseToggle;
     };
 
     void closeButtonPressed() override;

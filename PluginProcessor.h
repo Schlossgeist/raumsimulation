@@ -98,7 +98,8 @@ private:
                      { "SettingsGroup", {{ "name", "IR Settings" }},
                       {
                               { "Setting", {{ "id", "lines_in_waveform" },     { "value", 10.0 }}},
-                              { "Setting", {{ "id", "stereo_ir" },     { "value", false }}}
+                              { "Setting", {{ "id", "stereo_ir" },     { "value", false }}},
+                              { "Setting", {{ "id", "use_white_noise" },     { "value", true }}}
                       }
                      }
              }
