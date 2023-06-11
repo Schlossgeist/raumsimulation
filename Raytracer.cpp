@@ -112,6 +112,10 @@ void Raytracer::run()
 
         setStatusMessage("Estimated room size: " + String(roomVolumeM3) + " cubic meters");
         sleep(1000);
+
+        roomVolumeM3 = flood({0, 0, 100});
+        setStatusMessage("New Estimated room size: " + String(roomVolumeM3) + " cubic meters");
+        sleep(10000);
     }
 
     //========================= GATHERING =========================//
@@ -598,4 +602,51 @@ void Raytracer::restoreObjects()
 
         objects.push_back(object);
     }
+}
+
+
+float Raytracer::flood(glm::ivec3 startPoint)
+{
+    std::queue<glm::ivec3> queue;
+    queue.push(startPoint);
+
+    while (!queue.empty()) {
+        jassert(queue.size() < 750);
+
+        auto element = queue.front();
+        queue.pop();
+        std::vector<glm::ivec3> neighborsFound = findNeighbors(element);
+
+        for (auto neighbor : neighborsFound) {
+            cubes.push_back(neighbor);
+            queue.push(neighbor);
+        }
+    }
+
+    return cubes.size() * pow((float) cubeSizeCM / 100.0f, 3);
+}
+
+std::vector<glm::ivec3> Raytracer::findNeighbors(glm::ivec3 cube)
+{
+    std::vector<glm::ivec3> neighbors = {};
+
+    glm::ivec3 nx = {cube.x - cubeSizeCM, cube.y, cube.z};
+    glm::ivec3 px = {cube.x + cubeSizeCM, cube.y, cube.z};
+    glm::ivec3 ny = {cube.x, cube.y - cubeSizeCM, cube.z};
+    glm::ivec3 py = {cube.x, cube.y + cubeSizeCM, cube.z};
+    glm::ivec3 nz = {cube.x, cube.y, cube.z - cubeSizeCM};
+    glm::ivec3 pz = {cube.x, cube.y, cube.z + cubeSizeCM};
+
+    for (auto potentialNeighbor : {nx, px, ny, py, nz, pz}) {
+        bool alreadyFound = std::find(cubes.begin(), cubes.end(), potentialNeighbor) != cubes.end();
+        glm::vec3 floatCube = glm::vec3(cube.x / 100.0f, cube.y / 100.0f, cube.z / 100.0f);
+        glm::vec3 floatNeighbor = glm::vec3(potentialNeighbor.x / 100.0f, potentialNeighbor.y / 100.0f, potentialNeighbor.z / 100.0f);
+
+        Hit hit = calculateBounce({floatCube, glm::normalize(floatNeighbor - floatCube)});
+        bool collides = hit.hitSurface && hit.distance < sqrt(3) * cubeSizeCM / 100.0f * 1.5f;
+
+        if (!alreadyFound && !collides) neighbors.push_back(potentialNeighbor);
+    }
+
+    return neighbors;
 }

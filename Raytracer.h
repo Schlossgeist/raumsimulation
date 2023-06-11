@@ -121,6 +121,9 @@ public:
 
     std::vector<SecondarySource> secondarySources;
 
+    std::vector<glm::ivec3> cubes;
+    int cubeSizeCM = 50;
+
 private:
 
     RaumsimulationAudioProcessor& audioProcessor;
@@ -131,6 +134,10 @@ private:
 
     juce::Random randomGenerator;
     float randomNormalDistribution();
+
+
+    float flood(glm::ivec3 startPoint);
+    std::vector<glm::ivec3> findNeighbors(glm::ivec3 cube);
 
     void trace(Ray ray);
     Hit calculateBounce(Ray ray);
