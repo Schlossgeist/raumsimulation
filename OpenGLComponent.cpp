@@ -154,6 +154,25 @@ void OpenGLComponent::newOpenGLContextCreated()
     roomRRRShader = std::make_unique<Shader>(rmvpVertexShaderString, roomFragmentShaderString, openGLContext);
     microphoneRRRShader = std::make_unique<Shader>(rmvpVertexShaderString, microphoneFragmentShaderString, openGLContext);
     speakerRRRShader = std::make_unique<Shader>(rmvpVertexShaderString, speakerFragmentShaderString, openGLContext);
+
+    if (objFileURL.isEmpty()) {
+        roomShape.reset(new OpenGLUtils::Shape());
+    } else {
+        roomShape.reset(new OpenGLUtils::Shape(objFileURL.getLocalFile()));
+    }
+
+    roomAttributes.reset(new OpenGLUtils::Attributes(*roomRRRShader->getShaderProgram()));
+    visualizationAttributes.reset(new OpenGLUtils::Attributes(*genericShader->getShaderProgram()));
+    coordAttributes.reset(new OpenGLUtils::Attributes(*genericShader->getShaderProgram()));
+    floodAttributes.reset(new OpenGLUtils::Attributes(*genericShader->getShaderProgram()));
+
+    auto headFileStream = std::make_unique<MemoryInputStream>(BinaryData::head_obj, BinaryData::head_objSize, true);
+    microphoneShape.reset(new OpenGLUtils::Shape(String(CharPointer_UTF8((const char*) headFileStream->getData()))));
+    microphoneAttributes.reset(new OpenGLUtils::Attributes(*microphoneRRRShader->getShaderProgram()));
+
+    auto ballFileStream = std::make_unique<MemoryInputStream>(BinaryData::ball_obj, BinaryData::ball_objSize, true);
+    speakerShape.reset(new OpenGLUtils::Shape(String(CharPointer_UTF8((const char*) ballFileStream->getData()))));
+    speakerAttributes.reset(new OpenGLUtils::Attributes(*speakerRRRShader->getShaderProgram()));
 }
 
 void OpenGLComponent::openGLContextClosing()
@@ -422,65 +441,4 @@ void OpenGLComponent::setShaderProgram()
     const ScopedLock lock(shaderMutex); // Prevent concurrent access to shader strings and status
 
     shadersShouldUpdate = true;
-
-    newVisualizationVertexShader =
-            R"(#version 450
-               in vec4 position;
-               in vec4 sourceColor;
-
-               out vec4 destinationColor;
-
-               uniform mat4 projectionMatrix;
-               uniform mat4 viewMatrix;
-               uniform mat4 positionMatrix;
-               uniform mat4 rotationMatrix;
-
-               void main()
-               {
-                   destinationColor = sourceColor;
-                   gl_Position = projectionMatrix * viewMatrix * positionMatrix * rotationMatrix * position;
-               }
-            )";
-    newVisualizationFragmentShader =
-            R"(#version 450
-               in vec4 destinationColor;
-
-               layout(location = 0) out vec4 color;
-
-               void main()
-               {
-                   color = destinationColor;
-               }
-            )";
-
-    newFloodVertexShader = newVisualizationVertexShader;
-    newFloodFragmentShader = newVisualizationFragmentShader;
-
-    newCoordVertexShader =
-            R"(#version 450
-               in vec4 position;
-               in vec4 sourceColor;
-
-               out vec4 destinationColor;
-
-               uniform mat4 projectionMatrix;
-               uniform mat4 viewMatrix;
-
-               void main()
-               {
-                   destinationColor = sourceColor;
-                   gl_Position = projectionMatrix * viewMatrix * position;
-               }
-            )";
-    newCoordFragmentShader =
-            R"(#version 450
-               in vec4 destinationColor;
-
-               layout(location = 0) out vec4 color;
-
-               void main()
-               {
-                   color = destinationColor;
-               }
-            )";
 }
