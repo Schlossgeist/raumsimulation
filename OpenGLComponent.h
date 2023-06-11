@@ -1,5 +1,6 @@
 #pragma once
 
+#include "OpenGLUtility.h"
 #include "PluginProcessor.h"
 #include "Raytracer.h"
 #include "WavefrontObjParser.h"
@@ -816,44 +817,48 @@ private:
     std::unique_ptr<OpenGLShaderProgram>        roomShader;
     std::unique_ptr<OpenGLUtils::Shape>         roomShape;
     std::shared_ptr<OpenGLUtils::Attributes>    roomAttributes;
-    std::shared_ptr<OpenGLUtils::Uniforms>      roomUniforms;
     std::unique_ptr<OpenGLShaderProgram>        microphoneShader;
     std::unique_ptr<OpenGLUtils::Shape>         microphoneShape;
     std::shared_ptr<OpenGLUtils::Attributes>    microphoneAttributes;
-    std::shared_ptr<OpenGLUtils::Uniforms>      microphoneUniforms;
     std::unique_ptr<OpenGLShaderProgram>        speakerShader;
     std::unique_ptr<OpenGLUtils::Shape>         speakerShape;
     std::shared_ptr<OpenGLUtils::Attributes>    speakerAttributes;
-    std::shared_ptr<OpenGLUtils::Uniforms>      speakerUniforms;
     std::unique_ptr<OpenGLShaderProgram>        visualizationShader;
     std::shared_ptr<OpenGLUtils::Attributes>    visualizationAttributes;
-    std::shared_ptr<OpenGLUtils::Uniforms>      visualizationUniforms;
     std::unique_ptr<OpenGLShaderProgram>        coordShader;
     std::shared_ptr<OpenGLUtils::Attributes>    coordAttributes;
-    std::shared_ptr<OpenGLUtils::Uniforms>      coordUniforms;
+    std::unique_ptr<OpenGLShaderProgram>        floodShader;
+    std::shared_ptr<OpenGLUtils::Attributes>    floodAttributes;
 
     CriticalSection shaderMutex;
     String statusText;
-    String newRoomVertexShader, newRoomFragmentShader;
-    String newMicrophoneVertexShader, newMicrophoneFragmentShader;
-    String newSpeakerVertexShader, newSpeakerFragmentShader;
     String newVisualizationVertexShader, newVisualizationFragmentShader;
     String newCoordVertexShader, newCoordFragmentShader;
+    String newFloodVertexShader, newFloodFragmentShader;
+
+    bool shadersShouldUpdate = false;
+
+    std::unique_ptr<Shader> genericShader = nullptr;
+    std::unique_ptr<Shader> roomRRRShader = nullptr;
+    std::unique_ptr<Shader> microphoneRRRShader = nullptr;
+    std::unique_ptr<Shader> speakerRRRShader = nullptr;
 
     void updateShader()
     {
         const ScopedLock lock(shaderMutex); // Prevent concurrent access to shader strings and status
 
-        if (newRoomVertexShader.isNotEmpty() || newRoomFragmentShader.isNotEmpty()) {
+        if (!shadersShouldUpdate) return;
+
+        // ROOM
+        {
             std::unique_ptr<OpenGLShaderProgram> newRoomShader(new OpenGLShaderProgram(openGLContext));
 
-            if (newRoomShader->addVertexShader(newRoomVertexShader)
-                && newRoomShader->addFragmentShader(newRoomFragmentShader)
+            if (newRoomShader->addVertexShader(newVisualizationVertexShader)
+                && newRoomShader->addFragmentShader(newVisualizationFragmentShader)
                 && newRoomShader->link())
             {
                 roomShape.reset();
                 roomAttributes.reset();
-                roomUniforms.reset();
 
                 roomShader.reset(newRoomShader.release());
                 roomShader->use();
@@ -868,16 +873,14 @@ private:
                     roomShape.reset(new OpenGLUtils::Shape(objFileURL.getLocalFile()));
                 }
 
-                roomAttributes.reset(new OpenGLUtils::Attributes(*roomShader));
-                roomUniforms.reset(new OpenGLUtils::Uniforms(*roomShader));
+                roomAttributes.reset(new OpenGLUtils::Attributes(*roomRRRShader->getShaderProgram()));
 
                 statusText = "GLSL: v" + String(OpenGLShaderProgram::getLanguageVersion(), 2);
-            } else {
-                statusText = newRoomShader->getLastError();
             }
         }
 
-        if (newVisualizationVertexShader.isNotEmpty() || newVisualizationFragmentShader.isNotEmpty()) {
+        // VISUALIZATION
+        {
             std::unique_ptr<OpenGLShaderProgram> newVisualizationShader(new OpenGLShaderProgram(openGLContext));
 
             if (newVisualizationShader->addVertexShader(newVisualizationVertexShader)
@@ -885,13 +888,11 @@ private:
                 && newVisualizationShader->link())
             {
                 visualizationAttributes.reset();
-                visualizationUniforms.reset();
 
                 visualizationShader.reset(newVisualizationShader.release());
                 visualizationShader->use();
 
                 visualizationAttributes.reset(new OpenGLUtils::Attributes(*visualizationShader));
-                visualizationUniforms.reset(new OpenGLUtils::Uniforms(*visualizationShader));
 
                 statusText = "GLSL: v" + String(OpenGLShaderProgram::getLanguageVersion(), 2);
             } else {
@@ -899,7 +900,8 @@ private:
             }
         }
 
-        if (newCoordVertexShader.isNotEmpty() || newCoordFragmentShader.isNotEmpty()) {
+        // COORDINATE AXIS
+        {
             std::unique_ptr<OpenGLShaderProgram> newCoordShader(new OpenGLShaderProgram(openGLContext));
 
             if (newCoordShader->addVertexShader(newCoordVertexShader)
@@ -907,13 +909,11 @@ private:
                 && newCoordShader->link())
             {
                 coordAttributes.reset();
-                coordUniforms.reset();
 
                 coordShader.reset(newCoordShader.release());
                 coordShader->use();
 
                 coordAttributes.reset(new OpenGLUtils::Attributes(*coordShader));
-                coordUniforms.reset(new OpenGLUtils::Uniforms(*coordShader));
 
                 statusText = "GLSL: v" + String(OpenGLShaderProgram::getLanguageVersion(), 2);
             } else {
@@ -921,71 +921,69 @@ private:
             }
         }
 
-        if (newMicrophoneVertexShader.isNotEmpty() || newMicrophoneFragmentShader.isNotEmpty()) {
+        // FLOOD FILL
+        {
+            std::unique_ptr<OpenGLShaderProgram> newFloodShader(new OpenGLShaderProgram(openGLContext));
+
+            if (newFloodShader->addVertexShader(newFloodVertexShader)
+                && newFloodShader->addFragmentShader(newFloodFragmentShader)
+                && newFloodShader->link())
+            {
+                floodAttributes.reset();
+
+                floodShader.reset(newFloodShader.release());
+                floodShader->use();
+
+                floodAttributes.reset(new OpenGLUtils::Attributes(*floodShader));
+
+                statusText = "GLSL: v" + String(OpenGLShaderProgram::getLanguageVersion(), 2);
+            } else {
+                statusText = newFloodShader->getLastError();
+            }
+        }
+
+        // MICROPHONES
+        {
             std::unique_ptr<OpenGLShaderProgram> newMicrophoneShader(new OpenGLShaderProgram(openGLContext));
 
-            if (newMicrophoneShader->addVertexShader(newMicrophoneVertexShader)
-                && newMicrophoneShader->addFragmentShader(newMicrophoneFragmentShader)
-                && newMicrophoneShader->link())
+            if (true)
             {
                 microphoneShape.reset();
                 microphoneAttributes.reset();
-                microphoneUniforms.reset();
 
                 microphoneShader.reset(newMicrophoneShader.release());
                 microphoneShader->use();
 
                 auto headFileStream = std::make_unique<MemoryInputStream>(BinaryData::head_obj, BinaryData::head_objSize, true);
                 microphoneShape.reset(new OpenGLUtils::Shape(String(CharPointer_UTF8((const char*) headFileStream->getData()))));
-                microphoneAttributes.reset(new OpenGLUtils::Attributes(*microphoneShader));
-                microphoneUniforms.reset(new OpenGLUtils::Uniforms(*microphoneShader));
+                microphoneAttributes.reset(new OpenGLUtils::Attributes(*microphoneRRRShader->getShaderProgram()));
 
                 statusText = "GLSL: v" + String(OpenGLShaderProgram::getLanguageVersion(), 2);
-            } else {
-                statusText = newMicrophoneShader->getLastError();
             }
         }
 
-        if (newSpeakerVertexShader.isNotEmpty() || newSpeakerFragmentShader.isNotEmpty()) {
+        // SPEAKERS
+        {
             std::unique_ptr<OpenGLShaderProgram> newSpeakerShader(new OpenGLShaderProgram(openGLContext));
 
-            if (newSpeakerShader->addVertexShader(newSpeakerVertexShader)
-                && newSpeakerShader->addFragmentShader(newSpeakerFragmentShader)
-                && newSpeakerShader->link())
+            if (true)
             {
                 speakerShape.reset();
                 speakerAttributes.reset();
-                speakerUniforms.reset();
 
                 speakerShader.reset(newSpeakerShader.release());
                 speakerShader->use();
 
                 auto ballFileStream = std::make_unique<MemoryInputStream>(BinaryData::ball_obj, BinaryData::ball_objSize, true);
                 speakerShape.reset(new OpenGLUtils::Shape(String(CharPointer_UTF8((const char*) ballFileStream->getData()))));
-                speakerAttributes.reset(new OpenGLUtils::Attributes(*speakerShader));
-                speakerUniforms.reset(new OpenGLUtils::Uniforms(*speakerShader));
+                speakerAttributes.reset(new OpenGLUtils::Attributes(*speakerRRRShader->getShaderProgram()));
 
                 statusText = "GLSL: v" + String(OpenGLShaderProgram::getLanguageVersion(), 2);
-            } else {
-                statusText = newSpeakerShader->getLastError();
             }
         }
 
         triggerAsyncUpdate();
 
-        newRoomVertexShader = {};
-        newRoomFragmentShader = {};
-
-        newMicrophoneVertexShader = {};
-        newMicrophoneFragmentShader = {};
-
-        newSpeakerVertexShader = {};
-        newSpeakerFragmentShader = {};
-
-        newVisualizationVertexShader = {};
-        newVisualizationFragmentShader = {};
-
-        newCoordVertexShader = {};
-        newCoordFragmentShader = {};
+        shadersShouldUpdate = false;
     }
 };

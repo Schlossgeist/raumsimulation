@@ -77,6 +77,7 @@ target_sources(Raumsimulation
         ImpulseResponseComponent.h
         ObjectWindow.cpp
         ObjectWindow.h
+        OpenGLUtility.h
         OpenGLComponent.cpp
         OpenGLComponent.h
         PluginEditor.cpp

@@ -79,6 +79,81 @@ void OpenGLComponent::resized()
 
 void OpenGLComponent::newOpenGLContextCreated()
 {
+    const ScopedLock lock(shaderMutex);
+
+    jassert(OpenGLHelpers::isContextActive());
+
+    String rmvpVertexShaderString =
+            R"(#version 450
+               in vec4 position;
+               in vec4 sourceColor;
+
+               out vec4 destinationColor;
+
+               uniform mat4 projectionMatrix;
+               uniform mat4 viewMatrix;
+               uniform mat4 positionMatrix;
+               uniform mat4 rotationMatrix;
+
+               void main()
+               {
+                   destinationColor = sourceColor;
+                   gl_Position = projectionMatrix * viewMatrix * positionMatrix * rotationMatrix * position;
+               }
+            )";
+
+    String cFragmentShaderString =
+            R"(#version 450
+               in vec4 destinationColor;
+
+               layout(location = 0) out vec4 color;
+
+               void main()
+               {
+                   color = destinationColor;
+               }
+            )";
+
+    String roomFragmentShaderString =
+            R"(#version 450
+               in vec4 destinationColor;
+
+               layout(location = 0) out vec4 color;
+
+               void main()
+               {
+                   color = vec4(0.50, 0.50, 0.50, 0.50);
+               }
+            )";
+
+    String microphoneFragmentShaderString =
+            R"(#version 450
+               in vec4 destinationColor;
+
+               layout(location = 0) out vec4 color;
+
+               void main()
+               {
+                   color = vec4(0.50, 0.00, 0.00, 0.75);
+               }
+            )";
+
+    String speakerFragmentShaderString =
+            R"(#version 450
+               in vec4 destinationColor;
+
+               layout(location = 0) out vec4 color;
+
+               void main()
+               {
+                   color = vec4(0.00, 0.00, 0.50, 0.75);
+               }
+            )";
+
+    genericShader = std::make_unique<Shader>(rmvpVertexShaderString, cFragmentShaderString, openGLContext);
+    roomRRRShader = std::make_unique<Shader>(rmvpVertexShaderString, roomFragmentShaderString, openGLContext);
+    microphoneRRRShader = std::make_unique<Shader>(rmvpVertexShaderString, microphoneFragmentShaderString, openGLContext);
+    speakerRRRShader = std::make_unique<Shader>(rmvpVertexShaderString, speakerFragmentShaderString, openGLContext);
 }
 
 void OpenGLComponent::openGLContextClosing()
@@ -93,13 +168,16 @@ void OpenGLComponent::renderOpenGL()
 
     jassert(OpenGLHelpers::isContextActive());
 
-    auto desktopScale = (float)openGLContext.getRenderingScale();
+    auto desktopScale = (float) openGLContext.getRenderingScale();
 
     OpenGLHelpers::clear(getLookAndFeel().findColour(ResizableWindow::backgroundColourId));
 
     updateShader();   // Check whether we need to compile a new shader
 
     if (roomShader == nullptr)
+        return;
+
+    if (roomRRRShader == nullptr)
         return;
 
     // Having used the juce 2D renderer, it will have messed-up a whole load of GL state, so
@@ -118,222 +196,149 @@ void OpenGLComponent::renderOpenGL()
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
 
+    // ROOM
     glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);      // wireframe mode for room draw call
 
-    roomShader->use();
+    roomRRRShader->bind();
 
-    if (roomUniforms->projectionMatrix != nullptr)
-        roomUniforms->projectionMatrix->setMatrix4(getProjectionMatrix().mat, 1, false);
-
-    if (roomUniforms->viewMatrix != nullptr)
-        roomUniforms->viewMatrix->setMatrix4(getViewMatrix().mat, 1, false);
-
-    if (roomUniforms->positionMatrix != nullptr)
-        roomUniforms->positionMatrix->setMatrix4(Matrix3D<float>().mat, 1, false);
-
-    if (roomUniforms->rotationMatrix != nullptr)
-        roomUniforms->rotationMatrix->setMatrix4(Matrix3D<float>().mat, 1, false);
+    roomRRRShader->setUniformMatrix4("projectionMatrix", getProjectionMatrix().mat, 1, false);
+    roomRRRShader->setUniformMatrix4("viewMatrix", getViewMatrix().mat, 1, false);
+    roomRRRShader->setUniformMatrix4("positionMatrix", Matrix3D<float>().mat, 1 ,false);
+    roomRRRShader->setUniformMatrix4("rotationMatrix", Matrix3D<float>().mat, 1, false);
 
     roomShape->draw(*roomAttributes);
 
     glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
 
+    // MICROPHONES
     for (const auto& object : raytracer.objects) {
         if (object.type == Raytracer::Object::MICROPHONE && object.active) {
             auto microphoneMatrix = glm::translate(glm::mat4(1.0f), object.position);
 
-            microphoneShader->use();
+            microphoneRRRShader->bind();
 
-            if (microphoneUniforms->projectionMatrix != nullptr)
-                microphoneUniforms->projectionMatrix->setMatrix4(getProjectionMatrix().mat, 1, false);
-
-            if (microphoneUniforms->viewMatrix != nullptr)
-                microphoneUniforms->viewMatrix->setMatrix4(getViewMatrix().mat, 1, false);
-
-            if (microphoneUniforms->positionMatrix != nullptr)
-                microphoneUniforms->positionMatrix->setMatrix4(glm::value_ptr(microphoneMatrix), 1, false);
-
-            if (microphoneUniforms->rotationMatrix != nullptr)
-                microphoneUniforms->rotationMatrix->setMatrix4(Matrix3D<float>().mat, 1, false);
+            microphoneRRRShader->setUniformMatrix4("projectionMatrix", getProjectionMatrix().mat, 1, false);
+            microphoneRRRShader->setUniformMatrix4("viewMatrix", getViewMatrix().mat, 1, false);
+            microphoneRRRShader->setUniformMatrix4("positionMatrix", glm::value_ptr(microphoneMatrix), 1 ,false);
+            microphoneRRRShader->setUniformMatrix4("rotationMatrix", Matrix3D<float>().mat, 1, false);
 
             microphoneShape->draw(*microphoneAttributes);
         }
     }
 
-
+    // SPEAKERS
     for (const auto& object : raytracer.objects) {
         if (object.type == Raytracer::Object::SPEAKER && object.active) {
             auto speakerMatrix = glm::translate(glm::mat4(1.0f), object.position);
 
-            speakerShader->use();
+            speakerRRRShader->bind();
 
-            if (speakerUniforms->projectionMatrix != nullptr)
-                speakerUniforms->projectionMatrix->setMatrix4(getProjectionMatrix().mat, 1, false);
-
-            if (speakerUniforms->viewMatrix != nullptr)
-                speakerUniforms->viewMatrix->setMatrix4(getViewMatrix().mat, 1, false);
-
-            if (speakerUniforms->positionMatrix != nullptr)
-                speakerUniforms->positionMatrix->setMatrix4(glm::value_ptr(speakerMatrix), 1 ,false);
-
-            if (speakerUniforms->rotationMatrix != nullptr)
-                speakerUniforms->rotationMatrix->setMatrix4(Matrix3D<float>().mat, 1, false);
+            speakerRRRShader->setUniformMatrix4("projectionMatrix", getProjectionMatrix().mat, 1, false);
+            speakerRRRShader->setUniformMatrix4("viewMatrix", getViewMatrix().mat, 1, false);
+            speakerRRRShader->setUniformMatrix4("positionMatrix", glm::value_ptr(speakerMatrix), 1 ,false);
+            speakerRRRShader->setUniformMatrix4("rotationMatrix", Matrix3D<float>().mat, 1, false);
 
             speakerShape->draw(*speakerAttributes);
         }
     }
 
-    visualizationShader->use();
+    // VISUALIZATION
+    genericShader->bind();
 
-    if (visualizationUniforms->projectionMatrix != nullptr)
-        visualizationUniforms->projectionMatrix->setMatrix4(getProjectionMatrix().mat, 1, false);
+    genericShader->setUniformMatrix4("projectionMatrix", getProjectionMatrix().mat, 1, false);
+    genericShader->setUniformMatrix4("viewMatrix", getViewMatrix().mat, 1, false);
+    genericShader->setUniformMatrix4("positionMatrix", Matrix3D<float>().mat, 1 ,false);
+    genericShader->setUniformMatrix4("rotationMatrix", Matrix3D<float>().mat, 1, false);
 
-    if (visualizationUniforms->viewMatrix != nullptr)
-        visualizationUniforms->viewMatrix->setMatrix4(getViewMatrix().mat, 1, false);
+    float percentage = (float) parameters.state.getProperty("points_in_visualizer");
 
-    if (visualizationUniforms->positionMatrix != nullptr)
-        visualizationUniforms->positionMatrix->setMatrix4(Matrix3D<float>().mat, 1 ,false);
+    Array<OpenGLUtils::Vertex> vertices;
 
-    if (visualizationUniforms->rotationMatrix != nullptr)
-        visualizationUniforms->rotationMatrix->setMatrix4(Matrix3D<float>().mat, 1, false);
-
-    struct VertexBuffer
     {
-        explicit VertexBuffer(std::vector<Raytracer::SecondarySource>& secondarySources, float percentage)
-        {
-            using namespace ::juce::gl;
-
-            glGenBuffers(1, &vertexBuffer);
-            glBindBuffer(GL_ARRAY_BUFFER, vertexBuffer);
-
-            Array<OpenGLUtils::Vertex> vertices;
-
-            if (percentage > 0.0f) {
-                for (int i = 0; i < secondarySources.size(); i ++) {
-                    if (i % (int) (100.0f/percentage) != 0) {
-                        continue;
-                    }
-
-                    auto color = glm::rgbColor(glm::vec3(360.0f - (10.0f * (float) secondarySources[i].order), 1.0f, 0.5f));
-
-                    OpenGLUtils::Vertex vertex{
-                            {secondarySources[i].position.x, secondarySources[i].position.y, secondarySources[i].position.z},
-                            {secondarySources[i].normal.x, secondarySources[i].normal.y, secondarySources[i].normal.z},
-                            {color.r, color.g, color.b, 0.5f},
-                    };
-
-                    vertices.add(vertex);
+        if (percentage > 0.0f) {
+            for (int i = 0; i < raytracer.secondarySources.size(); i ++) {
+                if (i % (int) (100.0f/percentage) != 0) {
+                    continue;
                 }
-            } else if (!secondarySources.empty()) {
-                auto color = glm::rgbColor(glm::vec3(360.0f - (10.0f * (float) secondarySources[0].order), 1.0f, 0.5f));
+
+                auto color = glm::rgbColor(glm::vec3(360.0f - (10.0f * (float) raytracer.secondarySources[i].order), 1.0f, 0.5f));
 
                 OpenGLUtils::Vertex vertex{
-                        {secondarySources[0].position.x, secondarySources[0].position.y, secondarySources[0].position.z},
-                        {secondarySources[0].normal.x, secondarySources[0].normal.y, secondarySources[0].normal.z},
+                        {raytracer.secondarySources[i].position.x, raytracer.secondarySources[i].position.y, raytracer.secondarySources[i].position.z},
+                        {raytracer.secondarySources[i].normal.x, raytracer.secondarySources[i].normal.y, raytracer.secondarySources[i].normal.z},
                         {color.r, color.g, color.b, 0.5f},
                 };
 
                 vertices.add(vertex);
             }
+        } else if (!raytracer.secondarySources.empty()) {
+            auto color = glm::rgbColor(glm::vec3(360.0f - (10.0f * (float) raytracer.secondarySources[0].order), 1.0f, 0.5f));
 
+            OpenGLUtils::Vertex vertex{
+                    {raytracer.secondarySources[0].position.x, raytracer.secondarySources[0].position.y, raytracer.secondarySources[0].position.z},
+                    {raytracer.secondarySources[0].normal.x, raytracer.secondarySources[0].normal.y, raytracer.secondarySources[0].normal.z},
+                    {color.r, color.g, color.b, 0.5f},
+            };
 
-
-            size = vertices.size();
-
-            glBufferData(GL_ARRAY_BUFFER, vertices.size() * (int)sizeof(OpenGLUtils::Vertex),
-                         vertices.getRawDataPointer(), GL_STATIC_DRAW);
+            vertices.add(vertex);
         }
+    }
 
-        ~VertexBuffer()
-        {
-            using namespace ::juce::gl;
-
-            glDeleteBuffers(1, &vertexBuffer);
-        }
-
-        void bind()
-        {
-            using namespace ::juce::gl;
-
-            glBindBuffer(GL_ARRAY_BUFFER, vertexBuffer);
-        }
-
-        int size;
-        GLuint vertexBuffer;
-
-        JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(VertexBuffer)
-    };
-
-    float pointsInVisualizer = (float) parameters.state.getProperty("points_in_visualizer");
-
-    VertexBuffer secondarySourcesVertexBuffer(raytracer.secondarySources, pointsInVisualizer);
+    VertexBuffer secondarySourcesVertexBuffer(vertices.getRawDataPointer(), sizeof(OpenGLUtils::Vertex) * vertices.size());
 
     secondarySourcesVertexBuffer.bind();
 
     glPointSize(3);
 
     visualizationAttributes->enable();
-    glDrawElements(GL_POINTS, secondarySourcesVertexBuffer.size, GL_UNSIGNED_INT, nullptr);
+    glDrawElements(GL_POINTS, vertices.size(), GL_UNSIGNED_INT, nullptr);
     visualizationAttributes->disable();
 
+    // FLOOD FILL
+    genericShader->bind();
+
+    genericShader->setUniformMatrix4("projectionMatrix", getProjectionMatrix().mat, 1, false);
+    genericShader->setUniformMatrix4("viewMatrix", getViewMatrix().mat, 1, false);
+    genericShader->setUniformMatrix4("positionMatrix", Matrix3D<float>().mat, 1 ,false);
+    genericShader->setUniformMatrix4("rotationMatrix", Matrix3D<float>().mat, 1, false);
+
+    Array<OpenGLUtils::Vertex> floodVertices;
+
+    for (auto cube : raytracer.cubes) {
+        OpenGLUtils::Vertex vertex{
+                {(float) cube.x / 100.0f, (float) cube.y / 100.0f, (float) cube.z / 100.0f},
+                {0.0f, 0.0f, 0.0f},
+                {1.0f, 1.0f , 1.0f, 0.5f},
+        };
+
+        floodVertices.add(vertex);
+    }
+
+    VertexBuffer cubesVertexBuffer(floodVertices.getRawDataPointer(), sizeof(OpenGLUtils::Vertex) * floodVertices.size());
+
+    cubesVertexBuffer.bind();
+
+    glPointSize(3);
+
+    floodAttributes->enable();
+    glDrawElements(GL_POINTS, floodVertices.size(), GL_UNSIGNED_INT, nullptr);
+    floodAttributes->disable();
+
+    // COORDINATE AXIS
     glViewport(0, 0,
                roundToInt(desktopScale * (float)bounds.getWidth() / 10),
                roundToInt(desktopScale * (float)bounds.getHeight() / 10));
 
-    coordShader->use();
+    genericShader->bind();
 
-    if (coordUniforms->projectionMatrix != nullptr)
-        coordUniforms->projectionMatrix->setMatrix4(getCoordProjectionMatrix().mat, 1, false);
+    genericShader->setUniformMatrix4("projectionMatrix", getCoordProjectionMatrix().mat, 1, false);
+    genericShader->setUniformMatrix4("viewMatrix", getViewMatrix().mat, 1, false);
+    genericShader->setUniformMatrix4("positionMatrix", Matrix3D<float>().mat, 1 ,false);
+    genericShader->setUniformMatrix4("rotationMatrix", Matrix3D<float>().mat, 1, false);
 
-    if (coordUniforms->viewMatrix != nullptr)
-        coordUniforms->viewMatrix->setMatrix4(getViewMatrix().mat, 1, false);
-
-    if (coordUniforms->positionMatrix != nullptr)
-        coordUniforms->positionMatrix->setMatrix4(Matrix3D<float>().mat, 1 ,false);
-
-    if (coordUniforms->rotationMatrix != nullptr)
-        coordUniforms->rotationMatrix->setMatrix4(Matrix3D<float>().mat, 1, false);
-
-    struct VertexBufferCoord
-    {
-        explicit VertexBufferCoord(OpenGLUtils::Vertex directionVertex)
-        {
-            using namespace ::juce::gl;
-
-            glGenBuffers(1, &vertexBuffer);
-            glBindBuffer(GL_ARRAY_BUFFER, vertexBuffer);
-
-            OpenGLUtils::Vertex originVertex{{0.0f, 0.0f, 0.0f},
-                    {0.0f, 0.0f, 0.0f},
-                    {0.0f, 0.0f, 0.0f, 0.0f},
-            };
-
-            Array<OpenGLUtils::Vertex> vertices{originVertex, directionVertex};
-
-            size = vertices.size();
-
-            glBufferData(GL_ARRAY_BUFFER, vertices.size() * (int)sizeof(OpenGLUtils::Vertex),
-                         vertices.getRawDataPointer(), GL_STATIC_DRAW);
-        }
-
-        ~VertexBufferCoord()
-        {
-            using namespace ::juce::gl;
-
-            glDeleteBuffers(1, &vertexBuffer);
-        }
-
-        void bind()
-        {
-            using namespace ::juce::gl;
-
-            glBindBuffer(GL_ARRAY_BUFFER, vertexBuffer);
-        }
-
-        int size;
-        GLuint vertexBuffer;
-
-        JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(VertexBufferCoord)
+    OpenGLUtils::Vertex oVertex{{0.0f, 0.0f, 0.0f},
+            {0.0f, 0.0f, 0.0f},
+            {0.0f, 0.0f, 0.0f, 0.0f},
     };
 
     OpenGLUtils::Vertex xVertex{{1.0f, 0.0f, 0.0f},
@@ -351,24 +356,23 @@ void OpenGLComponent::renderOpenGL()
             {0.0f, 0.0f, 1.0f, 1.0f},
     };
 
-    VertexBufferCoord coordVertexBufferX(xVertex);
-    coordVertexBufferX.bind();
-    coordAttributes->enable();
-    glDrawElements(GL_LINES, coordVertexBufferX.size, GL_UNSIGNED_INT, nullptr);
-    coordAttributes->disable();
+    Array<OpenGLUtils::Vertex> coordVertices = {oVertex, xVertex, yVertex, zVertex};
 
-    VertexBufferCoord coordVertexBufferY(yVertex);
-    coordVertexBufferY.bind();
-    coordAttributes->enable();
-    glDrawElements(GL_LINES, coordVertexBufferY.size, GL_UNSIGNED_INT, nullptr);
-    coordAttributes->disable();
+    unsigned int indices[6] = {
+            0, 1,
+            0, 2,
+            0, 3
+    };
 
-    VertexBufferCoord coordVertexBufferZ(zVertex);
-    coordVertexBufferZ.bind();
-    coordAttributes->enable();
-    glDrawElements(GL_LINES, coordVertexBufferZ.size, GL_UNSIGNED_INT, nullptr);
-    coordAttributes->disable();
+    VertexBuffer coordVertexBuffer(coordVertices.getRawDataPointer(), sizeof(OpenGLUtils::Vertex) * coordVertices.size());
+    IndexBuffer coordIndexBuffer(indices, 6);
 
+    coordVertexBuffer.bind();
+    coordIndexBuffer.bind();
+
+    coordAttributes->enable();
+    glDrawElements(GL_LINES, coordIndexBuffer.getCount(), GL_UNSIGNED_INT, nullptr);
+    coordAttributes->disable();
 
     // Reset the element buffers so child Components draw correctly
     glBindBuffer(GL_ARRAY_BUFFER, 0);
@@ -417,79 +421,7 @@ void OpenGLComponent::setShaderProgram()
 {
     const ScopedLock lock(shaderMutex); // Prevent concurrent access to shader strings and status
 
-    newRoomVertexShader =
-            R"(#version 450
-               in vec4 position;
-
-               uniform mat4 projectionMatrix;
-               uniform mat4 viewMatrix;
-               uniform mat4 positionMatrix;
-               uniform mat4 rotationMatrix;
-
-               void main()
-               {
-                   gl_Position = projectionMatrix * viewMatrix * positionMatrix * rotationMatrix * position;
-               }
-            )";
-    newRoomFragmentShader =
-            R"(#version 450
-               layout(location = 0) out vec4 color;
-
-               void main()
-               {
-                   color = vec4(0.50, 0.50, 0.50, 0.50);
-               }
-            )";
-
-    newMicrophoneVertexShader =
-            R"(#version 450
-               in vec4 position;
-
-               uniform mat4 projectionMatrix;
-               uniform mat4 viewMatrix;
-               uniform mat4 positionMatrix;
-               uniform mat4 rotationMatrix;
-
-               void main()
-               {
-                   gl_Position = projectionMatrix * viewMatrix * positionMatrix * rotationMatrix * position;
-               }
-            )";
-
-    newMicrophoneFragmentShader =
-            R"(#version 450
-               layout(location = 0) out vec4 color;
-
-               void main()
-               {
-                   color = vec4(0.50, 0.00, 0.00, 0.75);
-               }
-            )";
-
-    newSpeakerVertexShader =
-            R"(#version 450
-               in vec4 position;
-
-               uniform mat4 projectionMatrix;
-               uniform mat4 viewMatrix;
-               uniform mat4 positionMatrix;
-               uniform mat4 rotationMatrix;
-
-               void main()
-               {
-                   gl_Position = projectionMatrix * viewMatrix * positionMatrix * rotationMatrix * position;
-               }
-            )";
-
-    newSpeakerFragmentShader =
-            R"(#version 450
-               layout(location = 0) out vec4 color;
-
-               void main()
-               {
-                   color = vec4(0.00, 0.00, 0.50, 0.75);
-               }
-            )";
+    shadersShouldUpdate = true;
 
     newVisualizationVertexShader =
             R"(#version 450
@@ -520,6 +452,9 @@ void OpenGLComponent::setShaderProgram()
                    color = destinationColor;
                }
             )";
+
+    newFloodVertexShader = newVisualizationVertexShader;
+    newFloodFragmentShader = newVisualizationFragmentShader;
 
     newCoordVertexShader =
             R"(#version 450
