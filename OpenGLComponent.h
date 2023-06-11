@@ -71,31 +71,6 @@ struct OpenGLUtils
         }
     };
 
-    struct Uniforms
-    {
-        explicit Uniforms(OpenGLShaderProgram& shader)
-        {
-            projectionMatrix.reset(createUniform(shader, "projectionMatrix"));
-            viewMatrix.reset(createUniform(shader, "viewMatrix"));
-            positionMatrix.reset(createUniform(shader, "positionMatrix"));
-            rotationMatrix.reset(createUniform(shader, "rotationMatrix"));
-        }
-
-        std::unique_ptr<OpenGLShaderProgram::Uniform> projectionMatrix, viewMatrix, positionMatrix, rotationMatrix;
-
-    private:
-        static OpenGLShaderProgram::Uniform* createUniform(OpenGLShaderProgram& shader,
-            const char* uniformName)
-        {
-            using namespace ::juce::gl;
-
-            if (glGetUniformLocation(shader.getProgramID(), uniformName) < 0)
-                return nullptr;
-
-            return new OpenGLShaderProgram::Uniform(shader, uniformName);
-        }
-    };
-
     struct Shape
     {
         Shape()
