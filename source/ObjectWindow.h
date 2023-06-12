@@ -1,8 +1,8 @@
 #pragma once
 
+#include "JuceHeader.h"
 #include "PluginProcessor.h"
 #include "Raytracer.h"
-#include <JuceHeader.h>
 
 class ObjectWindow : public juce::DocumentWindow
 {

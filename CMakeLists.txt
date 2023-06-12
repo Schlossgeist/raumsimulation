@@ -70,25 +70,25 @@ juce_generate_juce_header(Raumsimulation)
 
 target_sources(Raumsimulation
     PRIVATE
-        CustomDatatypes.h
-        CustomLookAndFeel.h
-        DecibelSlider.h
-        ImpulseResponseComponent.cpp
-        ImpulseResponseComponent.h
-        ObjectWindow.cpp
-        ObjectWindow.h
-        OpenGLUtility.h
-        OpenGLComponent.cpp
-        OpenGLComponent.h
-        PluginEditor.cpp
-        PluginEditor.h
-        PluginProcessor.cpp
-        PluginProcessor.h
-        Raytracer.cpp
-        Raytracer.h
-        SettingsWindow.cpp
-        SettingsWindow.h
-        WavefrontObjParser.h)
+        source/CustomDatatypes.h
+        source/CustomLookAndFeel.h
+        source/DecibelSlider.h
+        source/ImpulseResponseComponent.cpp
+        source/ImpulseResponseComponent.h
+        source/ObjectWindow.cpp
+        source/ObjectWindow.h
+        source/OpenGLUtility.h
+        source/OpenGLComponent.cpp
+        source/OpenGLComponent.h
+        source/PluginEditor.cpp
+        source/PluginEditor.h
+        source/PluginProcessor.cpp
+        source/PluginProcessor.h
+        source/Raytracer.cpp
+        source/Raytracer.h
+        source/SettingsWindow.cpp
+        source/SettingsWindow.h
+        source/WavefrontObjParser.h)
 
 # `target_compile_definitions` adds some preprocessor definitions to our target. In a Projucer
 # project, these might be passed in the 'Preprocessor Definitions' field. JUCE modules also make use

@@ -1,8 +1,8 @@
 #pragma once
 
-#include <JuceHeader.h>
-#include <glm/glm.hpp>
-#include <glm/gtc/type_ptr.hpp>
+#include "JuceHeader.h"
+#include "glm/glm.hpp"
+#include "glm/gtc/type_ptr.hpp"
 #include <utility>
 
 class VertexBufferLayout

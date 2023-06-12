@@ -27,9 +27,9 @@
   ==============================================================================
 */
 
-#include <JuceHeader.h>
 #include "OpenGLComponent.h"
-#include <glm/gtx/color_space.hpp>
+#include "JuceHeader.h"
+#include "glm/gtx/color_space.hpp"
 #include <memory>
 
 //==============================================================================

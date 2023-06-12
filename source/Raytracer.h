@@ -2,11 +2,11 @@
 
 #include "CustomDatatypes.h"
 #include "ImpulseResponseComponent.h"
+#include "JuceHeader.h"
 #include "PluginProcessor.h"
 #include "WavefrontObjParser.h"
-#include <glm/ext.hpp>
-#include <glm/glm.hpp>
-#include <JuceHeader.h>
+#include "glm/ext.hpp"
+#include "glm/glm.hpp"
 
 class Raytracer : public juce::ThreadWithProgressWindow,
                   public ChangeBroadcaster

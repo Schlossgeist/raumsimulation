@@ -1,12 +1,12 @@
 #pragma once
 
+#include "JuceHeader.h"
 #include "OpenGLUtility.h"
 #include "PluginProcessor.h"
 #include "Raytracer.h"
 #include "WavefrontObjParser.h"
-#include <glm/glm.hpp>
-#include <glm/gtx/color_space.hpp>
-#include <JuceHeader.h>
+#include "glm/glm.hpp"
+#include "glm/gtx/color_space.hpp"
 
 struct OpenGLUtils
 {
