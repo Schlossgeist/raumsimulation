@@ -119,9 +119,15 @@ void Raytracer::run()
         setStatusMessage("Estimated room size: " + String(roomVolumeM3) + " cubic meters");
         sleep(1000);
 
-        roomVolumeM3 = flood({0, 0, 100});
-        setStatusMessage("New Estimated room size: " + String(roomVolumeM3) + " cubic meters");
-        sleep(1000);
+        int volumeEstimationQualityLevel = parameters.state.getProperty("cube_size");
+        if (volumeEstimationQualityLevel > 0) {
+            cubeSizeCM = 100 - 25 * volumeEstimationQualityLevel;
+
+            roomVolumeM3 = flood({0, 0, 100});
+            setStatusMessage("More accurate estimated room size: " + String(roomVolumeM3) + " cubic meters");
+            sleep(1000);
+            cubes.clear();
+        }
     }
 
     //========================= GATHERING =========================//

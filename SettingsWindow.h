@@ -26,6 +26,15 @@ private:
             addAndMakeVisible(samplerateValueLabel);
             samplerateValueLabel.setText(String(parentWindow.audioProcessor.globalSampleRate) + "Hz", dontSendNotification);
 
+            addAndMakeVisible(cubeSizeLabel);
+            addAndMakeVisible(cubeSizeSlider);
+            cubeSizeSlider.setSliderStyle(juce::Slider::LinearBar);
+            cubeSizeSlider.setRange(0.0f, 3.0f, 1.0f);
+            cubeSizeSlider.setTooltip("Level of quality used for room size estimation.");
+            cubeSizeSlider.onValueChange = [this] { parentWindow.parameters.state.setProperty("cube_size", cubeSizeSlider.getValue(), nullptr); };
+            double cubeSize = parentWindow.parameters.state.getProperty("cube_size");
+            cubeSizeSlider.setValue(cubeSize, dontSendNotification);
+
 
             addAndMakeVisible(raytracerSettingsLabel);
             raytracerSettingsLabel.setFont(juce::Font(16.0f, juce::Font::bold));
@@ -33,7 +42,7 @@ private:
             addAndMakeVisible(raysPerSourceLabel);
             addAndMakeVisible(raysPerSourceSlider);
             raysPerSourceSlider.setSliderStyle(juce::Slider::LinearBar);
-            raysPerSourceSlider.setRange(100.0f, 10000.f, 1.0f);
+            raysPerSourceSlider.setRange(100.0f, 10000.0f, 1.0f);
             raysPerSourceSlider.setTooltip("Number of rays that are cast for every active sound source.");
             raysPerSourceSlider.onValueChange = [this] { parentWindow.parameters.state.setProperty("rays_per_source", raysPerSourceSlider.getValue(), nullptr); };
             double raysPerSource = parentWindow.parameters.state.getProperty("rays_per_source");
@@ -88,12 +97,16 @@ private:
             float labelWidthRatio = 0.5f;
 
             {   // General Settings
-                auto generalSettingsArea = area.removeFromTop(50);
+                auto generalSettingsArea = area.removeFromTop(75);
                 generalSettingsLabel.           setBounds(generalSettingsArea.removeFromTop(25));
 
                 auto samplerateArea = generalSettingsArea.removeFromTop(25);
                 samplerateLabel.                setBounds(samplerateArea.removeFromLeft((int) (labelWidthRatio * (float) samplerateArea.getWidth())));
                 samplerateValueLabel.           setBounds(samplerateArea);
+
+                auto cubeSizeArea = generalSettingsArea.removeFromTop(25);
+                cubeSizeLabel.                  setBounds(cubeSizeArea.removeFromLeft((int) (labelWidthRatio * (float) cubeSizeArea.getWidth())));
+                cubeSizeSlider.                 setBounds(cubeSizeArea);
             }
 
             {   // Raytracer Settings
@@ -133,6 +146,8 @@ private:
         Label           generalSettingsLabel{{}, "General"};
         Label           samplerateLabel{{}, "Rendering Samplerate"};
         Label           samplerateValueLabel{{}, "0"};
+        Label           cubeSizeLabel{{}, "Volume Estimation Quality Level"};
+        Slider          cubeSizeSlider;
 
 
         Label           raytracerSettingsLabel{{}, "Raytracer"};

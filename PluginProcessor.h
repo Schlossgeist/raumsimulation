@@ -84,6 +84,11 @@ private:
                               { "Setting", {{ "id", "obj_file_url" },     { "value", "" }}}
                       }
                      },
+                     { "SettingsGroup", {{ "name", "General Settings" }},
+                      {
+                              { "Setting", {{ "id", "cube_size" },     { "value", 4.0f }}}
+                      }
+                     },
                      { "SettingsGroup", {{ "name", "Room Settings" }},
                       {
                               { "Setting", {{ "id", "ir_file_url" },     { "value", "" }}}
