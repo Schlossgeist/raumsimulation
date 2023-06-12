@@ -30,6 +30,7 @@
 #include <JuceHeader.h>
 #include "OpenGLComponent.h"
 #include <glm/gtx/color_space.hpp>
+#include <memory>
 
 //==============================================================================
 OpenGLComponent::OpenGLComponent(RaumsimulationAudioProcessor& p, juce::AudioProcessorValueTreeState& pts, Raytracer& r)
@@ -42,7 +43,7 @@ OpenGLComponent::OpenGLComponent(RaumsimulationAudioProcessor& p, juce::AudioPro
     rotationSpeed = (float) parameters.state.getProperty("rotation_speed");
 
     setOpaque(true);
-    controlsOverlay.reset(new ControlsOverlay(*this));
+    controlsOverlay = std::make_unique<ControlsOverlay>(*this);
     addAndMakeVisible(controlsOverlay.get());
 
 
@@ -156,23 +157,23 @@ void OpenGLComponent::newOpenGLContextCreated()
     speakerRRRShader = std::make_unique<Shader>(rmvpVertexShaderString, speakerFragmentShaderString, openGLContext);
 
     if (objFileURL.isEmpty()) {
-        roomShape.reset(new OpenGLUtils::Shape());
+        roomShape = std::make_unique<OpenGLUtils::Shape>();
     } else {
-        roomShape.reset(new OpenGLUtils::Shape(objFileURL.getLocalFile()));
+        roomShape = std::make_unique<OpenGLUtils::Shape>(objFileURL.getLocalFile());
     }
 
-    roomAttributes.reset(new OpenGLUtils::Attributes(*roomRRRShader->getShaderProgram()));
-    visualizationAttributes.reset(new OpenGLUtils::Attributes(*genericShader->getShaderProgram()));
-    coordAttributes.reset(new OpenGLUtils::Attributes(*genericShader->getShaderProgram()));
-    floodAttributes.reset(new OpenGLUtils::Attributes(*genericShader->getShaderProgram()));
+    roomAttributes = std::make_shared<OpenGLUtils::Attributes>(*roomRRRShader->getShaderProgram());
+    visualizationAttributes = std::make_shared<OpenGLUtils::Attributes>(*genericShader->getShaderProgram());
+    coordAttributes = std::make_shared<OpenGLUtils::Attributes>(*genericShader->getShaderProgram());
+    floodAttributes = std::make_shared<OpenGLUtils::Attributes>(*genericShader->getShaderProgram());
 
     auto headFileStream = std::make_unique<MemoryInputStream>(BinaryData::head_obj, BinaryData::head_objSize, true);
-    microphoneShape.reset(new OpenGLUtils::Shape(String(CharPointer_UTF8((const char*) headFileStream->getData()))));
-    microphoneAttributes.reset(new OpenGLUtils::Attributes(*microphoneRRRShader->getShaderProgram()));
+    microphoneShape = std::make_unique<OpenGLUtils::Shape>(String(CharPointer_UTF8((const char*) headFileStream->getData())));
+    microphoneAttributes = std::make_shared<OpenGLUtils::Attributes>(*microphoneRRRShader->getShaderProgram());
 
     auto ballFileStream = std::make_unique<MemoryInputStream>(BinaryData::ball_obj, BinaryData::ball_objSize, true);
-    speakerShape.reset(new OpenGLUtils::Shape(String(CharPointer_UTF8((const char*) ballFileStream->getData()))));
-    speakerAttributes.reset(new OpenGLUtils::Attributes(*speakerRRRShader->getShaderProgram()));
+    speakerShape = std::make_unique<OpenGLUtils::Shape>(String(CharPointer_UTF8((const char*) ballFileStream->getData())));
+    speakerAttributes = std::make_shared<OpenGLUtils::Attributes>(*speakerRRRShader->getShaderProgram());
 }
 
 void OpenGLComponent::openGLContextClosing()
