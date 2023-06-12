@@ -25,6 +25,13 @@ void Raytracer::setRoom(const File& objFile)
     room.load(objFile);
 }
 
+void Raytracer::clear()
+{
+    histograms.clear();
+    secondarySources.clear();
+    cubes.clear();
+}
+
 void Raytracer::run()
 {
     setStatusMessage("Loading room model...");

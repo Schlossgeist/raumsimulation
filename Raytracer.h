@@ -94,6 +94,7 @@ public:
 
     void run() override;
     void setRoom(const File& objFile);
+    void clear();
     void saveObjects();
     void restoreObjects();
 

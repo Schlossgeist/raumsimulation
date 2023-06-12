@@ -188,6 +188,8 @@ void OpenGLComponent::renderOpenGL()
 
     OpenGLHelpers::clear(getLookAndFeel().findColour(ResizableWindow::backgroundColourId));
 
+    updateRoomModel();
+
     if (roomRRRShader == nullptr)
         return;
 

@@ -403,7 +403,7 @@ private:
                             openGLComponent.parameters.state.setProperty("obj_file_url", result.toString(false), nullptr);
                             objFileLabel.setText(result.toString(false), sendNotificationAsync);
 
-                            openGLComponent.updateRoomModel();
+                            openGLComponent.raytracer.clear();
                             openGLComponent.audioProcessor.updateParameters();
                         }
 
