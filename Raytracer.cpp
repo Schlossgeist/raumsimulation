@@ -1,5 +1,4 @@
 #include "Raytracer.h"
-#include "ImpulseResponseComponent.h"
 #include <glm/gtx/vector_angle.hpp>
 
 Raytracer::Raytracer(RaumsimulationAudioProcessor& p, juce::AudioProcessorValueTreeState& pts, ImpulseResponseComponent& irc, const String &windowTitle, bool hasProgressBar, bool hasCancelButton, int timeOutMsWhenCancelling, const String &cancelButtonText, Component *componentToCentreAround)
@@ -122,7 +121,7 @@ void Raytracer::run()
 
         roomVolumeM3 = flood({0, 0, 100});
         setStatusMessage("New Estimated room size: " + String(roomVolumeM3) + " cubic meters");
-        sleep(10000);
+        sleep(1000);
     }
 
     //========================= GATHERING =========================//
@@ -618,14 +617,11 @@ float Raytracer::flood(glm::ivec3 startPoint)
     queue.push(startPoint);
 
     while (!queue.empty()) {
-        jassert(queue.size() < 750);
-
         auto element = queue.front();
         queue.pop();
         std::vector<glm::ivec3> neighborsFound = findNeighbors(element);
 
         for (auto neighbor : neighborsFound) {
-            cubes.push_back(neighbor);
             queue.push(neighbor);
         }
     }
@@ -645,7 +641,12 @@ std::vector<glm::ivec3> Raytracer::findNeighbors(glm::ivec3 cube)
     glm::ivec3 pz = {cube.x, cube.y, cube.z + cubeSizeCM};
 
     for (auto potentialNeighbor : {nx, px, ny, py, nz, pz}) {
-        bool alreadyFound = std::find(cubes.begin(), cubes.end(), potentialNeighbor) != cubes.end();
+        bool alreadyFound = cubes.count(potentialNeighbor) > 0;
+
+        if (alreadyFound) continue;
+
+        cubes.insert(potentialNeighbor);
+
         glm::vec3 floatCube = glm::vec3(cube.x / 100.0f, cube.y / 100.0f, cube.z / 100.0f);
         glm::vec3 floatNeighbor = glm::vec3(potentialNeighbor.x / 100.0f, potentialNeighbor.y / 100.0f, potentialNeighbor.z / 100.0f);
 

@@ -122,8 +122,28 @@ public:
 
     std::vector<SecondarySource> secondarySources;
 
-    std::vector<glm::ivec3> cubes;
-    int cubeSizeCM = 50;
+    struct Hash {
+        static unsigned cantor(unsigned int a, unsigned int b) {
+            return (a + b) / 2 * (a + b +1) + b;
+        }
+
+        //  X:  0 | -1 |  1 | -2 |  2 | -3 |  3 | -4 |  4 | -5 |  5 | ...
+        //  Y:  0 |  1 |  2 |  3 |  4 |  5 |  6 |  7 |  8 |  9 | 10 | ...
+        static unsigned int mirror(int x) {
+            if (x >= 0) {
+                return 2*x;
+            } else {
+                return 2*x-1;
+            }
+        }
+
+        unsigned long long operator()(const glm::ivec3 &vector) const {
+            return cantor(mirror(vector.x), cantor(mirror(vector.y), mirror(vector.z)));
+        }
+    };
+
+    std::unordered_set<glm::ivec3, Hash> cubes;
+    int cubeSizeCM = 100;
 
 private:
 
