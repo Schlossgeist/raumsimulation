@@ -626,7 +626,9 @@ float Raytracer::flood(glm::ivec3 startPoint)
         }
     }
 
-    return cubes.size() * pow((float) cubeSizeCM / 100.0f, 3);
+    double marginErrorCompensationFactor = 0.00005f * (double) (cubeSizeCM*cubeSizeCM) - 0.0025 * (double) cubeSizeCM + 1.15f;
+
+    return (float) (marginErrorCompensationFactor * cubes.size() * pow((float) cubeSizeCM / 100.0f, 3));
 }
 
 std::vector<glm::ivec3> Raytracer::findNeighbors(glm::ivec3 cube)
