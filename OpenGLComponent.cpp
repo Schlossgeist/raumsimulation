@@ -255,6 +255,8 @@ void OpenGLComponent::renderOpenGL()
         }
     }
 
+    updateVisualizationVertexBuffers();
+
     // VISUALIZATION
     genericShader->bind();
 
@@ -263,48 +265,14 @@ void OpenGLComponent::renderOpenGL()
     genericShader->setUniformMatrix4("positionMatrix", Matrix3D<float>().mat, 1 ,false);
     genericShader->setUniformMatrix4("rotationMatrix", Matrix3D<float>().mat, 1, false);
 
-    float percentage = (float) parameters.state.getProperty("points_in_visualizer");
-
-    Array<OpenGLUtils::Vertex> vertices;
-
-    {
-        if (percentage > 0.0f) {
-            for (int i = 0; i < raytracer.secondarySources.size(); i ++) {
-                if (i % (int) (100.0f/percentage) != 0) {
-                    continue;
-                }
-
-                auto color = glm::rgbColor(glm::vec3(360.0f - (10.0f * (float) raytracer.secondarySources[i].order), 1.0f, 0.5f));
-
-                OpenGLUtils::Vertex vertex{
-                        {raytracer.secondarySources[i].position.x, raytracer.secondarySources[i].position.y, raytracer.secondarySources[i].position.z},
-                        {raytracer.secondarySources[i].normal.x, raytracer.secondarySources[i].normal.y, raytracer.secondarySources[i].normal.z},
-                        {color.r, color.g, color.b, 0.5f},
-                };
-
-                vertices.add(vertex);
-            }
-        } else if (!raytracer.secondarySources.empty()) {
-            auto color = glm::rgbColor(glm::vec3(360.0f - (10.0f * (float) raytracer.secondarySources[0].order), 1.0f, 0.5f));
-
-            OpenGLUtils::Vertex vertex{
-                    {raytracer.secondarySources[0].position.x, raytracer.secondarySources[0].position.y, raytracer.secondarySources[0].position.z},
-                    {raytracer.secondarySources[0].normal.x, raytracer.secondarySources[0].normal.y, raytracer.secondarySources[0].normal.z},
-                    {color.r, color.g, color.b, 0.5f},
-            };
-
-            vertices.add(vertex);
-        }
-    }
-
-    VertexBuffer secondarySourcesVertexBuffer(vertices.getRawDataPointer(), sizeof(OpenGLUtils::Vertex) * vertices.size());
+    VertexBuffer secondarySourcesVertexBuffer(visualizationVertices.getRawDataPointer(), sizeof(OpenGLUtils::Vertex) * visualizationVertices.size());
 
     secondarySourcesVertexBuffer.bind();
 
     glPointSize(3);
 
     visualizationAttributes->enable();
-    glDrawElements(GL_POINTS, vertices.size(), GL_UNSIGNED_INT, nullptr);
+    glDrawElements(GL_POINTS, visualizationVertices.size(), GL_UNSIGNED_INT, nullptr);
     visualizationAttributes->disable();
 
     // FLOOD FILL
@@ -314,18 +282,6 @@ void OpenGLComponent::renderOpenGL()
     genericShader->setUniformMatrix4("viewMatrix", getViewMatrix().mat, 1, false);
     genericShader->setUniformMatrix4("positionMatrix", Matrix3D<float>().mat, 1 ,false);
     genericShader->setUniformMatrix4("rotationMatrix", Matrix3D<float>().mat, 1, false);
-
-    Array<OpenGLUtils::Vertex> floodVertices;
-
-    for (auto cube : raytracer.cubes) {
-        OpenGLUtils::Vertex vertex{
-                {(float) cube.x / 100.0f, (float) cube.y / 100.0f, (float) cube.z / 100.0f},
-                {0.0f, 0.0f, 0.0f},
-                {1.0f, 1.0f , 1.0f, 0.5f},
-        };
-
-        floodVertices.add(vertex);
-    }
 
     VertexBuffer cubesVertexBuffer(floodVertices.getRawDataPointer(), sizeof(OpenGLUtils::Vertex) * floodVertices.size());
 

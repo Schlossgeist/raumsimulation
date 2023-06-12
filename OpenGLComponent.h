@@ -5,6 +5,7 @@
 #include "Raytracer.h"
 #include "WavefrontObjParser.h"
 #include <glm/glm.hpp>
+#include <glm/gtx/color_space.hpp>
 #include <JuceHeader.h>
 
 struct OpenGLUtils
@@ -441,12 +442,65 @@ private:
     std::unique_ptr<Shader> microphoneRRRShader = nullptr;
     std::unique_ptr<Shader> speakerRRRShader = nullptr;
 
+    Array<OpenGLUtils::Vertex> visualizationVertices;
+    Array<OpenGLUtils::Vertex> floodVertices;
+
     void updateRoomModel()
     {
         if (objFileURL.isEmpty()) {
             roomShape = std::make_shared<OpenGLUtils::Shape>();
         } else {
             roomShape = std::make_shared<OpenGLUtils::Shape>(objFileURL.getLocalFile());
+        }
+    }
+
+    void updateVisualizationVertexBuffers()
+    {
+        // FLOOD FILL
+        if (floodVertices.size() != raytracer.cubes.size()) {
+            floodVertices.clear();
+            for (auto cube : raytracer.cubes) {
+                OpenGLUtils::Vertex vertex{
+                        {(float) cube.x / 100.0f, (float) cube.y / 100.0f, (float) cube.z / 100.0f},
+                        {0.0f, 0.0f, 0.0f},
+                        {1.0f, 1.0f , 1.0f, 0.5f},
+                };
+
+                floodVertices.add(vertex);
+            }
+        }
+
+        // VISUALIZATION
+        if (visualizationVertices.size() != raytracer.secondarySources.size()) {
+            visualizationVertices.clear();
+            float percentage = (float) parameters.state.getProperty("points_in_visualizer");
+            if (percentage > 0.0f) {
+                for (int i = 0; i < raytracer.secondarySources.size(); i ++) {
+                    if (i % (int) (100.0f/percentage) != 0) {
+                        continue;
+                      }
+
+                    auto color = glm::rgbColor(glm::vec3(360.0f - (10.0f * (float) raytracer.secondarySources[i].order), 1.0f, 0.5f ));
+
+                    OpenGLUtils::Vertex vertex{
+                            {raytracer.secondarySources[i].position.x, raytracer.secondarySources[i].position.y, raytracer.secondarySources[i].position.z},
+                            {raytracer.secondarySources[i].normal.x, raytracer.secondarySources[i].normal.y, raytracer.secondarySources[i].normal.z},
+                            {color.r, color.g, color.b, 0.5f},
+                     };
+
+                    visualizationVertices.add(vertex);
+                }
+            } else if (!raytracer.secondarySources.empty()) {
+                auto color = glm::rgbColor(glm::vec3(360.0f - (10.0f * (float) raytracer.secondarySources[0].order), 1.0f, 0.5f ));
+
+                OpenGLUtils::Vertex vertex{
+                        {raytracer.secondarySources[0].position.x, raytracer.secondarySources[0].position.y, raytracer.secondarySources[0].position.z},
+                        {raytracer.secondarySources[0].normal.x, raytracer.secondarySources[0].normal.y, raytracer.secondarySources[0].normal.z},
+                        {color.r, color.g, color.b, 0.5f},
+                 };
+
+                visualizationVertices.add(vertex);
+            }
         }
     }
 };
