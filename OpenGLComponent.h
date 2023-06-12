@@ -438,7 +438,6 @@ private:
     float rotation = 0.0f;
 
     juce::URL objFileURL = {};
-    std::unique_ptr<OpenGLShaderProgram>        roomShader;
     std::unique_ptr<OpenGLUtils::Shape>         roomShape;
     std::shared_ptr<OpenGLUtils::Attributes>    roomAttributes;
     std::unique_ptr<OpenGLUtils::Shape>         microphoneShape;
@@ -463,12 +462,8 @@ private:
 
         // ROOM
         {
-            std::unique_ptr<OpenGLShaderProgram> newRoomShader(new OpenGLShaderProgram(openGLContext));
-
             roomShape.reset();
             roomAttributes.reset();
-
-            roomShader.reset(newRoomShader.release());
 
 
             if (objFileURL.isEmpty())

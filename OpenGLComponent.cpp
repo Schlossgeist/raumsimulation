@@ -194,9 +194,6 @@ void OpenGLComponent::renderOpenGL()
 
     updateShader();   // Check whether we need to compile a new shader
 
-    if (roomShader == nullptr)
-        return;
-
     if (roomRRRShader == nullptr)
         return;
 
