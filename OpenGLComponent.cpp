@@ -156,11 +156,7 @@ void OpenGLComponent::newOpenGLContextCreated()
     microphoneRRRShader = std::make_unique<Shader>(rmvpVertexShaderString, microphoneFragmentShaderString, openGLContext);
     speakerRRRShader = std::make_unique<Shader>(rmvpVertexShaderString, speakerFragmentShaderString, openGLContext);
 
-    if (objFileURL.isEmpty()) {
-        roomShape = std::make_unique<OpenGLUtils::Shape>();
-    } else {
-        roomShape = std::make_unique<OpenGLUtils::Shape>(objFileURL.getLocalFile());
-    }
+    updateRoomModel();
 
     roomAttributes = std::make_shared<OpenGLUtils::Attributes>(*roomRRRShader->getShaderProgram());
     visualizationAttributes = std::make_shared<OpenGLUtils::Attributes>(*genericShader->getShaderProgram());
@@ -168,11 +164,11 @@ void OpenGLComponent::newOpenGLContextCreated()
     floodAttributes = std::make_shared<OpenGLUtils::Attributes>(*genericShader->getShaderProgram());
 
     auto headFileStream = std::make_unique<MemoryInputStream>(BinaryData::head_obj, BinaryData::head_objSize, true);
-    microphoneShape = std::make_unique<OpenGLUtils::Shape>(String(CharPointer_UTF8((const char*) headFileStream->getData())));
+    microphoneShape = std::make_shared<OpenGLUtils::Shape>(String(CharPointer_UTF8((const char*) headFileStream->getData())));
     microphoneAttributes = std::make_shared<OpenGLUtils::Attributes>(*microphoneRRRShader->getShaderProgram());
 
     auto ballFileStream = std::make_unique<MemoryInputStream>(BinaryData::ball_obj, BinaryData::ball_objSize, true);
-    speakerShape = std::make_unique<OpenGLUtils::Shape>(String(CharPointer_UTF8((const char*) ballFileStream->getData())));
+    speakerShape = std::make_shared<OpenGLUtils::Shape>(String(CharPointer_UTF8((const char*) ballFileStream->getData())));
     speakerAttributes = std::make_shared<OpenGLUtils::Attributes>(*speakerRRRShader->getShaderProgram());
 }
 
@@ -191,8 +187,6 @@ void OpenGLComponent::renderOpenGL()
     auto desktopScale = (float) openGLContext.getRenderingScale();
 
     OpenGLHelpers::clear(getLookAndFeel().findColour(ResizableWindow::backgroundColourId));
-
-    updateShader();   // Check whether we need to compile a new shader
 
     if (roomRRRShader == nullptr)
         return;

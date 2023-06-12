@@ -272,7 +272,6 @@ private:
             objFileLabel.attachToComponent(&objFileLoadButton, false);
             objFileLabel.setText(openGLComponent.objFileURL.toString(false), sendNotificationAsync);
 
-            updateShader();
             lookAndFeelChanged();
         }
 
@@ -368,11 +367,6 @@ private:
             zoomSlider.setValue(zoomSlider.getValue() + magnifyAmount - 1.0f);
         }
 
-        void updateShader()
-        {
-            startTimer(10);
-        }
-
         Label statusLabel;
 
     private:
@@ -389,7 +383,6 @@ private:
         void timerCallback() override
         {
             stopTimer();
-            openGLComponent.updateShader();
         }
 
         OpenGLComponent& openGLComponent;
@@ -418,7 +411,7 @@ private:
                             openGLComponent.parameters.state.setProperty("obj_file_url", result.toString(false), nullptr);
                             objFileLabel.setText(result.toString(false), sendNotificationAsync);
 
-                            startTimer(10);
+                            openGLComponent.updateRoomModel();
                             openGLComponent.audioProcessor.updateParameters();
                         }
 
@@ -438,11 +431,11 @@ private:
     float rotation = 0.0f;
 
     juce::URL objFileURL = {};
-    std::unique_ptr<OpenGLUtils::Shape>         roomShape;
+    std::shared_ptr<OpenGLUtils::Shape>         roomShape;
     std::shared_ptr<OpenGLUtils::Attributes>    roomAttributes;
-    std::unique_ptr<OpenGLUtils::Shape>         microphoneShape;
+    std::shared_ptr<OpenGLUtils::Shape>         microphoneShape;
     std::shared_ptr<OpenGLUtils::Attributes>    microphoneAttributes;
-    std::unique_ptr<OpenGLUtils::Shape>         speakerShape;
+    std::shared_ptr<OpenGLUtils::Shape>         speakerShape;
     std::shared_ptr<OpenGLUtils::Attributes>    speakerAttributes;
     std::shared_ptr<OpenGLUtils::Attributes>    visualizationAttributes;
     std::shared_ptr<OpenGLUtils::Attributes>    coordAttributes;
@@ -456,30 +449,12 @@ private:
     std::unique_ptr<Shader> microphoneRRRShader = nullptr;
     std::unique_ptr<Shader> speakerRRRShader = nullptr;
 
-    void updateShader()
+    void updateRoomModel()
     {
-        const ScopedLock lock(shaderMutex); // Prevent concurrent access to shader strings and status
-
-        // ROOM
-        {
-            roomShape.reset();
-            roomAttributes.reset();
-
-
-            if (objFileURL.isEmpty())
-            {
-                roomShape.reset(new OpenGLUtils::Shape());
-            }
-            else
-            {
-                roomShape.reset(new OpenGLUtils::Shape(objFileURL.getLocalFile()));
-            }
-
-            roomAttributes.reset(new OpenGLUtils::Attributes(*roomRRRShader->getShaderProgram()));
-
-            statusText = "GLSL: v" + String(OpenGLShaderProgram::getLanguageVersion(), 2);
+        if (objFileURL.isEmpty()) {
+            roomShape = std::make_shared<OpenGLUtils::Shape>();
+        } else {
+            roomShape = std::make_shared<OpenGLUtils::Shape>(objFileURL.getLocalFile());
         }
-
-        triggerAsyncUpdate();
     }
 };
