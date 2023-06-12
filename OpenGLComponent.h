@@ -233,8 +233,7 @@ private:
     juce::AudioProcessorValueTreeState& parameters;
     Raytracer& raytracer;
 
-    class ControlsOverlay : public Component,
-                            private Timer
+    class ControlsOverlay : public Component
     {
     public:
         ControlsOverlay(OpenGLComponent& oGLC)
@@ -376,13 +375,6 @@ private:
 
             openGLComponent.scale = (float) zoomSlider.getValue();
             openGLComponent.rotationSpeed = (float) speedSlider.getValue();
-        }
-
-        enum { shaderLinkDelay = 500 };
-
-        void timerCallback() override
-        {
-            stopTimer();
         }
 
         OpenGLComponent& openGLComponent;
