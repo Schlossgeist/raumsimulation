@@ -389,7 +389,7 @@ private:
         void timerCallback() override
         {
             stopTimer();
-            openGLComponent.setShaderProgram();
+            openGLComponent.updateShader();
         }
 
         OpenGLComponent& openGLComponent;
@@ -452,8 +452,6 @@ private:
     CriticalSection shaderMutex;
     String statusText;
 
-    bool shadersShouldUpdate = false;
-
     std::unique_ptr<Shader> genericShader = nullptr;
     std::unique_ptr<Shader> roomRRRShader = nullptr;
     std::unique_ptr<Shader> microphoneRRRShader = nullptr;
@@ -462,8 +460,6 @@ private:
     void updateShader()
     {
         const ScopedLock lock(shaderMutex); // Prevent concurrent access to shader strings and status
-
-        if (!shadersShouldUpdate) return;
 
         // ROOM
         {
@@ -490,7 +486,5 @@ private:
         }
 
         triggerAsyncUpdate();
-
-        shadersShouldUpdate = false;
     }
 };

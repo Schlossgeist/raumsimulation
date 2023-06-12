@@ -435,10 +435,3 @@ Matrix3D<float> OpenGLComponent::getCoordProjectionMatrix() const
 
     return Matrix3D<float>::fromFrustum(-w, w, -h, h, 5.0f, 50.0f);
 }
-
-void OpenGLComponent::setShaderProgram()
-{
-    const ScopedLock lock(shaderMutex); // Prevent concurrent access to shader strings and status
-
-    shadersShouldUpdate = true;
-}
