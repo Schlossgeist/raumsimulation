@@ -61,6 +61,8 @@ void Raytracer::run()
 
     //========================= RAY TRACING =========================//
     {
+        secondarySources.clear();
+
         std::vector<Object> speakers;
 
         for (const auto& object : objects) {
