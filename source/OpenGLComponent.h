@@ -283,15 +283,12 @@ private:
                 auto right = area.removeFromRight(10);
                 right.reduce(0, area.getHeight()/4);
 
-                float startHue  = 1.00f;
-                float endHue    = 0.75f;
-
                 auto gradient = ColourGradient::vertical(
-                        Colour::fromHSV(startHue, 1.0f, 0.5f, 1.0f),
-                        Colour::fromHSV(endHue, 1.0f, 0.5f, 1.0f),
+                        Colour::fromHSV(openGLComponent.startHue, 1.0f, 0.5f, 1.0f),
+                        Colour::fromHSV(openGLComponent.endHue, 1.0f, 0.5f, 1.0f),
                         right);
 
-                float step = (1 - endHue) / (float) openGLComponent.raytracer.maxOrder;
+                float step = (1 - openGLComponent.endHue) / (float) openGLComponent.raytracer.maxOrder;
                 for (int i = openGLComponent.raytracer.minOrder; i < openGLComponent.raytracer.maxOrder; i++) {
                     gradient.addColour((float) i / (float) openGLComponent.raytracer.maxOrder, Colour::fromHSV(1.0f - step * (float) i, 1.0f, 0.5f, 1.0f));
                 }
@@ -443,6 +440,8 @@ private:
     std::unique_ptr<Shader> speakerRRRShader = nullptr;
 
     Array<OpenGLUtils::Vertex> visualizationVertices;
+    float startHue  = 1.00f;
+    float endHue    = 0.55f;
     Array<OpenGLUtils::Vertex> floodVertices;
 
     void updateRoomModel()
@@ -478,26 +477,30 @@ private:
                 for (int i = 0; i < raytracer.secondarySources.size(); i ++) {
                     if (i % (int) (100.0f/percentage) != 0) {
                         continue;
-                      }
+                    }
 
-                    auto color = glm::rgbColor(glm::vec3(360.0f - (10.0f * (float) raytracer.secondarySources[i].order), 1.0f, 0.5f ));
+                    auto secondarySource = raytracer.secondarySources[i];
+
+                    float step = (1 - endHue) / (float) raytracer.maxOrder;
+
+                    auto colour = Colour::fromHSV(1.0f - step * (float) secondarySource.order, 1.0f, 0.5f, 1.0f);
 
                     OpenGLUtils::Vertex vertex{
                             {raytracer.secondarySources[i].position.x, raytracer.secondarySources[i].position.y, raytracer.secondarySources[i].position.z},
                             {raytracer.secondarySources[i].normal.x, raytracer.secondarySources[i].normal.y, raytracer.secondarySources[i].normal.z},
-                            {color.r, color.g, color.b, 0.5f},
-                     };
+                            {colour.getFloatRed(), colour.getFloatGreen(), colour.getFloatBlue(), 0.5f},
+                    };
 
                     visualizationVertices.add(vertex);
                 }
             } else if (!raytracer.secondarySources.empty()) {
-                auto color = glm::rgbColor(glm::vec3(360.0f - (10.0f * (float) raytracer.secondarySources[0].order), 1.0f, 0.5f ));
+                auto color = glm::rgbColor(glm::vec3(360.0f, 1.0f, 0.5f ));
 
                 OpenGLUtils::Vertex vertex{
                         {raytracer.secondarySources[0].position.x, raytracer.secondarySources[0].position.y, raytracer.secondarySources[0].position.z},
                         {raytracer.secondarySources[0].normal.x, raytracer.secondarySources[0].normal.y, raytracer.secondarySources[0].normal.z},
                         {color.r, color.g, color.b, 0.5f},
-                 };
+                };
 
                 visualizationVertices.add(vertex);
             }
