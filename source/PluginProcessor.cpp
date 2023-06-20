@@ -219,8 +219,10 @@ void RaumsimulationAudioProcessor::setStateInformation (const void* data, int si
 {
     std::unique_ptr<juce::XmlElement> xmlState = getXmlFromBinary(data, sizeInBytes);
 
-    juce::File myFile (File::getSpecialLocation(File::SpecialLocationType::userDesktopDirectory).getFullPathName() + "/test.xml");
+    #if JUCE_DEBUG
+    juce::File myFile (File::getSpecialLocation(File::SpecialLocationType::userDesktopDirectory).getFullPathName() + "/settings.xml");
     xmlState->writeTo(myFile);
+    #endif
 
     if (xmlState != nullptr)
         if (xmlState->hasTagName(parameters.state.getType())) {
