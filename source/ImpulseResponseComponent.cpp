@@ -1,5 +1,7 @@
 #include "ImpulseResponseComponent.h"
 
+#include <memory>
+
 
 ImpulseResponseComponent::ImpulseResponseComponent(RaumsimulationAudioProcessor& p, juce::AudioProcessorValueTreeState& pts)
     : audioProcessor(p)
@@ -53,7 +55,7 @@ void ImpulseResponseComponent::paint(juce::Graphics & g)
 
     if (thumbnail.getTotalLength() > 0.0) {
         double ms = 0.0f;
-        double numberOfLines = (int) parameters.state.getProperty("lines_in_waveform");;
+        double numberOfLines = (int) parameters.state.getProperty("lines_in_waveform");
 
         double pixelPerMS = thumbArea.getWidth() / (thumbnail.getTotalLength() * 1000.0f);
         double stepMS = thumbnail.getTotalLength() * 1000.0f / numberOfLines;
@@ -63,9 +65,9 @@ void ImpulseResponseComponent::paint(juce::Graphics & g)
             g.setFont(8.0f);
 
             if (ms < 1000.0f) {
-                g.drawText(String(ms) + " ms", thumbArea.getX() + (int) (pixelPerMS * ms) + 3, thumbArea.getY(), 25.0f, 10.0f, Justification::centredLeft, false);
+                g.drawText(String(ms) + " ms", thumbArea.getX() + (int) (pixelPerMS * ms) + 3, thumbArea.getY(), 25, 10, Justification::centredLeft, false);
             } else {
-                g.drawText(String(ms / 1000.0f) + " s", thumbArea.getX() + (int) (pixelPerMS * ms) + 3, thumbArea.getY(), 25.0f, 10.0f, Justification::centredLeft, false);
+                g.drawText(String(ms / 1000.0f) + " s", thumbArea.getX() + (int) (pixelPerMS * ms) + 3, thumbArea.getY(), 25, 10, Justification::centredLeft, false);
             }
 
             g.setColour(getLookAndFeel().findColour(0x0000001));
@@ -131,7 +133,7 @@ void ImpulseResponseComponent::updateThumbnail(double sampleRate)
 {
     const MessageManagerLock messageManagerLock;
 
-    thumbnail.setSource(&audioProcessor.ir, sampleRate, Uuid().hash());
+    thumbnail.setSource(&audioProcessor.ir, sampleRate, (long long) Uuid().hash());
     irFileLabel.setText(irFileURL.toString(false), sendNotificationAsync);
     irSizeLabel.setText(juce::String::formatted("%.2f s", thumbnail.getTotalLength()), dontSendNotification);
 }
@@ -141,7 +143,7 @@ void ImpulseResponseComponent::openFile()
     if (irFileChooser != nullptr)
         return;
 
-    irFileChooser.reset(new FileChooser("Select an audio file...", File(), "*.aif,*.flac,*.mp3,*.ogg,*.wav"));
+    irFileChooser = std::make_unique<FileChooser>("Select an audio file...", File(), "*.aif,*.flac,*.mp3,*.ogg,*.wav");
 
     irFileChooser->launchAsync(FileBrowserComponent::openMode | FileBrowserComponent::canSelectFiles,
             [this] (const FileChooser& fc) mutable
@@ -165,7 +167,7 @@ void ImpulseResponseComponent::saveFile()
     if (irFileChooser != nullptr)
         return;
 
-    irFileChooser.reset(new FileChooser("Select an audio file...", File(), "*.wav"));
+    irFileChooser = std::make_unique<FileChooser>("Select an audio file...", File(), "*.wav");
 
     irFileChooser->launchAsync(FileBrowserComponent::saveMode | FileBrowserComponent::warnAboutOverwriting,
             [this] (const FileChooser& fc) mutable

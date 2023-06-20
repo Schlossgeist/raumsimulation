@@ -146,7 +146,7 @@ private:
                                                parentWindow.closeButtonPressed(); };
         }
 
-        void paint(juce::Graphics & g) override
+        void paint(juce::Graphics& /*g*/) override
         {
         }
 

@@ -87,7 +87,7 @@ private:
             whiteNoiseToggle.setToggleState(useWhiteNoise, dontSendNotification);
         };
 
-        void paint(juce::Graphics & g) override
+        void paint(juce::Graphics& /*g*/) override
         {
         }
 

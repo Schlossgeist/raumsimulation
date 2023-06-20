@@ -203,7 +203,7 @@ public:
     void openGLContextClosing() override;
     void renderOpenGL() override;
 
-    void changeListenerCallback(juce::ChangeBroadcaster *source) override
+    void changeListenerCallback(juce::ChangeBroadcaster* /*source*/) override
     {
         controlsOverlay->repaint();
     }

@@ -83,16 +83,16 @@ int RaumsimulationAudioProcessor::getCurrentProgram()
     return 0;
 }
 
-void RaumsimulationAudioProcessor::setCurrentProgram(int index)
+void RaumsimulationAudioProcessor::setCurrentProgram(int /*index*/)
 {
 }
 
-const juce::String RaumsimulationAudioProcessor::getProgramName(int index)
+const juce::String RaumsimulationAudioProcessor::getProgramName(int /*index*/)
 {
     return {};
 }
 
-void RaumsimulationAudioProcessor::changeProgramName(int index, const juce::String& newName)
+void RaumsimulationAudioProcessor::changeProgramName(int /*index*/, const juce::String& /*newName*/)
 {
 }
 
@@ -151,7 +151,7 @@ bool RaumsimulationAudioProcessor::isBusesLayoutSupported(const BusesLayout& lay
 }
 #endif
 
-void RaumsimulationAudioProcessor::processBlock(juce::AudioBuffer<float>& buffer, juce::MidiBuffer& midiMessages)
+void RaumsimulationAudioProcessor::processBlock(juce::AudioBuffer<float>& buffer, juce::MidiBuffer& /*midiMessages*/)
 {
     if (jmax (getTotalNumInputChannels(), getTotalNumOutputChannels()) == 0)
         return;
@@ -265,9 +265,9 @@ void RaumsimulationAudioProcessor::clearIR()
 /**
  * @see https://www.recordingblogs.com/wiki/sine-sweep
  */
-juce::AudioBuffer<float>& RaumsimulationAudioProcessor::generateLogarithmicSweep(double startFrequency, double endFrequency, float lengthS, double sampleRate, int numChannels)
+juce::AudioBuffer<float>& RaumsimulationAudioProcessor::generateLogarithmicSweep(double startFrequency, double endFrequency, double lengthS, double sampleRate, int numChannels)
 {
-    auto buffer = new juce::AudioBuffer<float>(numChannels, sampleRate*lengthS);
+    auto buffer = new juce::AudioBuffer<float>(numChannels, (int) (sampleRate*lengthS));
 
     auto* writePtrArray = buffer->getArrayOfWritePointers();
 

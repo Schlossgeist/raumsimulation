@@ -60,7 +60,7 @@ public:
     void reset() override;
     void playIR();
     void clearIR();
-    juce::AudioBuffer<float>& generateLogarithmicSweep(double startFrequency, double endFrequency, float lengthS, double sampleRate, int numChannels);
+    static juce::AudioBuffer<float>& generateLogarithmicSweep(double startFrequency, double endFrequency, double lengthS, double sampleRate, int numChannels);
 
     juce::AudioBuffer<float> ir;
     int irBufferPosition = 0;
