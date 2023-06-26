@@ -163,11 +163,11 @@ void OpenGLComponent::newOpenGLContextCreated()
     coordAttributes = std::make_shared<OpenGLUtils::Attributes>(*genericShader->getShaderProgram());
     floodAttributes = std::make_shared<OpenGLUtils::Attributes>(*genericShader->getShaderProgram());
 
-    auto headFileStream = std::make_unique<MemoryInputStream>(BinaryData::head_obj, BinaryData::head_objSize, true);
+    auto headFileStream = std::make_unique<MemoryInputStream>(BinaryData::ball_small_obj, BinaryData::ball_small_objSize, true);
     microphoneShape = std::make_shared<OpenGLUtils::Shape>(String(CharPointer_UTF8((const char*) headFileStream->getData())));
     microphoneAttributes = std::make_shared<OpenGLUtils::Attributes>(*microphoneRRRShader->getShaderProgram());
 
-    auto ballFileStream = std::make_unique<MemoryInputStream>(BinaryData::ball_obj, BinaryData::ball_objSize, true);
+    auto ballFileStream = std::make_unique<MemoryInputStream>(BinaryData::ball_small_obj, BinaryData::ball_small_objSize, true);
     speakerShape = std::make_shared<OpenGLUtils::Shape>(String(CharPointer_UTF8((const char*) ballFileStream->getData())));
     speakerAttributes = std::make_shared<OpenGLUtils::Attributes>(*speakerRRRShader->getShaderProgram());
 }

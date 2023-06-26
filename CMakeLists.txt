@@ -118,7 +118,9 @@ juce_add_binary_data(BinaryData SOURCES
         resources/shaders/raytracing.shader
         resources/models/raum001.obj
         resources/models/ball.obj
+        resources/models/ball_small.obj
         resources/models/head.obj
+        resources/models/head_small.obj
         resources/icon.png
         resources/icons/add_circle_FILL0_wght100_GRAD-25_opsz48.svg
         resources/icons/add_circle_FILL0_wght100_GRAD200_opsz48.svg
