@@ -287,6 +287,11 @@ void Raytracer::run()
                             gain += slice[ep].energyCoefficients[i];
                         }
                         gain /= (float) slice.size();
+                    } else {
+                        float decayMS = 10.0f;
+                        float durationMS = (float) (endTimeMS - startTimeMS);
+
+                        gain *= (durationMS < decayMS) ? 1.0f - durationMS / decayMS : 0.0f;
                     }
 
                     writePtrArray[channel][sample] = gain;
