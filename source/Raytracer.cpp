@@ -278,7 +278,7 @@ void Raytracer::run()
 
             for (int channel = 0; channel < buffer.getNumChannels(); channel++) {
                 for (int i = 0; i < 6; i++) {
-                    setStatusMessage("Calculating gain curve for sample " + String(sample+1) + "/" + String(audioProcessor.ir.getNumSamples()));
+                    setStatusMessage("Calculating energy envelopes for sample " + String(sample+1) + "/" + String(audioProcessor.ir.getNumSamples()));
                     auto *writePtrArray = gainCurveBuffers[i].getArrayOfWritePointers();
 
                     if (!slice.empty()) {
@@ -297,6 +297,9 @@ void Raytracer::run()
                     writePtrArray[channel][sample] = gain;
                 }
             }
+
+            // update the progress bar on the dialog box
+            setProgress((float) sample / (float) buffer.getNumSamples());
         }
 
         AudioBuffer<float> bandBuffers[6] = {buffer, buffer, buffer, buffer, buffer, buffer};
