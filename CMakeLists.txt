@@ -112,10 +112,6 @@ target_compile_definitions(Raumsimulation
 # Conversion to binary-data will happen when your target is built.
 
 juce_add_binary_data(BinaryData SOURCES
-        resources/shaders/room.shader
-        resources/shaders/microphone.shader
-        resources/shaders/speaker.shader
-        resources/shaders/raytracing.shader
         resources/models/raum001.obj
         resources/models/ball.obj
         resources/models/ball_small.obj
