@@ -1,16 +1,7 @@
-/*
-  ==============================================================================
-
-    This file contains the basic framework code for a JUCE plugin editor.
-
-  ==============================================================================
-*/
-
 #include "PluginProcessor.h"
 #include "PluginEditor.h"
 #include "Raytracer.h"
 
-//==============================================================================
 RaumsimulationAudioProcessorEditor::RaumsimulationAudioProcessorEditor(RaumsimulationAudioProcessor& p, juce::AudioProcessorValueTreeState& pts)
     : AudioProcessorEditor(&p)
     , impulseResponseComponent(p, pts)
@@ -98,7 +89,6 @@ RaumsimulationAudioProcessorEditor::~RaumsimulationAudioProcessorEditor()
 {
 }
 
-//==============================================================================
 void RaumsimulationAudioProcessorEditor::paint (juce::Graphics& g)
 {
     g.fillAll(getLookAndFeel().findColour(juce::ResizableWindow::backgroundColourId));

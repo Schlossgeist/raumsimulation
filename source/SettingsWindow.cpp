@@ -1,6 +1,5 @@
 #include "SettingsWindow.h"
 
-
 SettingsWindow::SettingsWindow(RaumsimulationAudioProcessor& p, juce::AudioProcessorValueTreeState& pts, const String& name, Colour backgroundColour, int requiredButtons, bool addToDesktop)
     : audioProcessor(p)
     , parameters(pts)

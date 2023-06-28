@@ -1,7 +1,5 @@
 #include "ImpulseResponseComponent.h"
-
 #include <memory>
-
 
 ImpulseResponseComponent::ImpulseResponseComponent(RaumsimulationAudioProcessor& p, juce::AudioProcessorValueTreeState& pts)
     : audioProcessor(p)

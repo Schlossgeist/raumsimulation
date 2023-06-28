@@ -1,38 +1,7 @@
-/*
-  ==============================================================================
-
-    OpenGLComponent.cpp
-    Created: 18 Apr 2023 9:41:30pm
-    Author:  Nick
-
-  ==============================================================================
-*/
-
-/*
-  ==============================================================================
-
-   This file is part of the JUCE examples.
-   Copyright (c) 2022 - Raw Material Software Limited
-
-   The code included in this file is provided under the terms of the ISC license
-   http://www.isc.org/downloads/software-support-policy/isc-license. Permission
-   To use, copy, modify, and/or distribute this software for any purpose with or
-   without fee is hereby granted provided that the above copyright notice and
-   this permission notice appear in all copies.
-
-   THE SOFTWARE IS PROVIDED "AS IS" WITHOUT ANY WARRANTY, AND ALL WARRANTIES,
-   WHETHER EXPRESSED OR IMPLIED, INCLUDING MERCHANTABILITY AND FITNESS FOR
-   PURPOSE, ARE DISCLAIMED.
-
-  ==============================================================================
-*/
-
-#include "OpenGLComponent.h"
 #include "JuceHeader.h"
-#include "glm/gtx/color_space.hpp"
+#include "OpenGLComponent.h"
 #include <memory>
 
-//==============================================================================
 OpenGLComponent::OpenGLComponent(RaumsimulationAudioProcessor& p, juce::AudioProcessorValueTreeState& pts, Raytracer& r)
     : audioProcessor(p)
     , parameters(pts)
@@ -68,9 +37,6 @@ void OpenGLComponent::paint(juce::Graphics& /*g*/)
 
 void OpenGLComponent::resized()
 {
-    // This method is where you should set the bounds of any child
-    // components that your component contains..
-
     const ScopedLock lock(mutex);
 
     bounds = getLocalBounds();
@@ -193,8 +159,7 @@ void OpenGLComponent::renderOpenGL()
     if (roomRRRShader == nullptr)
         return;
 
-    // Having used the juce 2D renderer, it will have messed-up a whole load of GL state, so
-    // we need to initialise some important settings before doing our normal GL 3D drawing..
+    // reset OpenGL state
     glEnable(GL_DEPTH_TEST);
     glDepthFunc(GL_LESS);
     glEnable(GL_BLEND);

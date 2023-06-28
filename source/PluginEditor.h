@@ -1,11 +1,3 @@
-/*
-  ==============================================================================
-
-    This file contains the basic framework code for a JUCE plugin editor.
-
-  ==============================================================================
-*/
-
 #pragma once
 
 #include "CustomLookAndFeel.h"
@@ -18,16 +10,12 @@
 #include "Raytracer.h"
 #include "SettingsWindow.h"
 
-//==============================================================================
-/**
-*/
 class RaumsimulationAudioProcessorEditor : public juce::AudioProcessorEditor
 {
 public:
     RaumsimulationAudioProcessorEditor(RaumsimulationAudioProcessor&, juce::AudioProcessorValueTreeState&);
     ~RaumsimulationAudioProcessorEditor() override;
 
-    //==============================================================================
     void paint (juce::Graphics&) override;
     void resized() override;
 

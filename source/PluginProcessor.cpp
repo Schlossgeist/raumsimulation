@@ -1,15 +1,6 @@
-/*
-  ==============================================================================
-
-    This file contains the basic framework code for a JUCE plugin processor.
-
-  ==============================================================================
-*/
-
 #include "PluginProcessor.h"
 #include "PluginEditor.h"
 
-//==============================================================================
 RaumsimulationAudioProcessor::RaumsimulationAudioProcessor()
 #ifndef JucePlugin_PreferredChannelConfigurations
      : AudioProcessor (BusesProperties()
@@ -34,7 +25,6 @@ RaumsimulationAudioProcessor::~RaumsimulationAudioProcessor()
 {
 }
 
-//==============================================================================
 const juce::String RaumsimulationAudioProcessor::getName() const
 {
     return JucePlugin_Name;
@@ -96,7 +86,6 @@ void RaumsimulationAudioProcessor::changeProgramName(int /*index*/, const juce::
 {
 }
 
-//==============================================================================
 void RaumsimulationAudioProcessor::prepareToPlay(double sampleRate, int samplesPerBlock)
 {
     reset();
@@ -196,7 +185,6 @@ void RaumsimulationAudioProcessor::processBlock(juce::AudioBuffer<float>& buffer
     gain.process(processContext);
 }
 
-//==============================================================================
 bool RaumsimulationAudioProcessor::hasEditor() const
 {
     return true; // (change this to false if you choose to not supply an editor)
@@ -207,7 +195,6 @@ juce::AudioProcessorEditor* RaumsimulationAudioProcessor::createEditor()
     return new RaumsimulationAudioProcessorEditor (*this, parameters);
 }
 
-//==============================================================================
 void RaumsimulationAudioProcessor::getStateInformation (juce::MemoryBlock& destData)
 {
     auto state = parameters.copyState();
@@ -230,8 +217,6 @@ void RaumsimulationAudioProcessor::setStateInformation (const void* data, int si
         }
 }
 
-//==============================================================================
-// This creates new instances of the plugin..
 juce::AudioProcessor* JUCE_CALLTYPE createPluginFilter()
 {
     return new RaumsimulationAudioProcessor();
